@@ -1,0 +1,9 @@
+requests
+CaptchaCracker
+pillow
+blinker==1.7.0
+asyncpg
+aiogram
+aiosqlite
+sqlalchemy
+apscheduler
