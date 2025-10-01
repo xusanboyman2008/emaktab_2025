@@ -31,7 +31,7 @@ async def generate_unique_url(length: int = 15):
 # DATABASE_URL = "sqlite+aiosqlite:///database.sqlite3"
 DATABASE_URL = os.getenv(
     "DATABASE",
-    "postgresql+asyncpg://postgres:LazseLwQVQyTWoyKlIAfbFZVvgQAfJbl@gondola.proxy.rlwy.net:30847/railway"
+    "postgresql+asyncpg://emaktab_at025_user:I2AmVy4vt9ezGzvvllyFgwv0U1hZjhy1@dpg-d3el0s1r0fns73biv6c0-a.oregon-postgres.render.com/emaktab_at025"
 )
 
 # DATABASE_URL = "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
@@ -305,6 +305,17 @@ async def update_logins(login_id, last_login, last_cookie, password=None):
                 await session.commit()
                 return True
 
+
+async def get_all_captcha():
+    async with async_session() as session:
+        async with session.begin():
+            a = await session.execute(select(Captcha_ids))
+            r = a.scalars().all()
+            c = 0
+            for i in r:
+                c+=1
+            return c
+
 async def create_or_change_user_role(user_tg,role='Admin'):
     async with async_session() as session:
         async with session.begin():
@@ -334,14 +345,11 @@ async def create_database_back_up():
 
 async def main():
     await init()
+    # await add_captchas_by()
     # await create_database_back_up()# run your DB init
 
 
 if __name__ == "__main__":
-    import sys, asyncio
-
-    if sys.platform.startswith("win"):
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
     asyncio.run(main())
+    asyncio.run(get_all_captcha())
 

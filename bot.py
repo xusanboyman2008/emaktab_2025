@@ -25,9 +25,9 @@ telegraph = Telegraph()
 telegraph.create_account(short_name="xusanboy")
 
 # url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev/'
-url = os.getenv('URL')
+url = os.getenv('URL',"https://emaktab-2025.onrender.com/")
 # Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
-Token = os.getenv('TOKEN')
+Token = os.getenv('TOKEN',"7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M")
 bot = Bot(token=Token, default=DefaultBotProperties(
     parse_mode=ParseMode.HTML
 ))
@@ -292,6 +292,7 @@ async def password(message: Message, state: FSMContext):
     login = {'1': {'username': login1, 'password': password, 'last_login': False, 'last_cookie': '',
                    "tg_id": message.from_user.id}}
     response = await send_request_main(login)
+    print(response)
     bot_username = await bot.get_me()
     if not response['1']['last_login']:
         if user.captcha_for_bot is None:

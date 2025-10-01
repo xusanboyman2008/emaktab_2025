@@ -77,7 +77,8 @@ async def username_login(students_dict):
         new_cookie = cookie if last_login else data.get("last_cookie")
         students_dict[sid]["last_login"] = last_login
         students_dict[sid]["last_cookie"] = new_cookie
-        await update_logins(login_id=students_dict[sid]["login_id"],last_login=students_dict[sid]['last_login'],last_cookie=students_dict[sid]["last_cookie"])
+        if login >=4:
+            await update_logins(login_id=students_dict[sid]["login_id",''],last_login=students_dict[sid]['last_login'],last_cookie=students_dict[sid]["last_cookie"])
     return students_dict
 
 

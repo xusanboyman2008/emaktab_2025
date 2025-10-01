@@ -157,7 +157,7 @@ def home():
     if not tg_id:
         return jsonify('fuck off bitch who you think are you ')
     return render_template_string(file, username=username, password=password,captcha_id=captcha,tg_id=tg_id)
-
+loop = asyncio.get_event_loop()  # reuse one loop
 @app.route("/login", methods=["POST"])
 def login():
     username = request.form.get("username", "")
@@ -167,10 +167,10 @@ def login():
     tg_id = request.form.get("tg_id", "")
     print(username,password,captcha_id,captcha)
 
-    cookie_len,cookie = asyncio.run(login_by_user(username=username, password=password, captcha_text=captcha,captcha_id=captcha_id))
+    cookie_len,cookie = loop.run_until_complete(login_by_user(username=username, password=password, captcha_text=captcha,captcha_id=captcha_id))
     print(cookie_len)
     if cookie_len>3:
-        a = asyncio.run(create_login(password=password,username=username,last_login=True,cookie= cookie,tg_id=tg_id))
+        a = loop.run_until_complete(create_login(password=password,username=username,last_login=True,cookie= cookie,tg_id=tg_id))
         return jsonify({"success": True, "message": "Foydalanuvchi muvaffaqiyatli qo‘shildi!"})
     else:
         return jsonify({"success": False, "message": "Login yoki parol noto‘g‘ri."})

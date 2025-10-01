@@ -29,10 +29,7 @@ async def main2():
     asyncio.create_task(send_json())
     await dp.start_polling(bot, skip_updates=True)
 
-async def main():
-    await init()
-    # await main2()
-    await dp.start_polling(bot)
+
 
 
 def run_flask():
