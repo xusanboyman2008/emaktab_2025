@@ -7,7 +7,7 @@ from login_web import app
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from web.bot import send_json
+from bot import send_json
 
 scheduler = AsyncIOScheduler()
 UZBEKISTAN_TZ = pytz.timezone("Asia/Tashkent")
