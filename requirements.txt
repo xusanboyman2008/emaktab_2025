@@ -4,6 +4,7 @@ pillow
 blinker==1.7.0
 asyncpg
 aiogram
+telegraph
 aiosqlite
 sqlalchemy
 apscheduler
