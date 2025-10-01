@@ -29,8 +29,7 @@ url = os.getenv('URL')
 # Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
 Token = os.getenv('TOKEN')
 bot = Bot(token=Token, default=DefaultBotProperties(
-    parse_mode=ParseMode.HTML,
-    reply_markup=reply_keyboard_remove.ReplyKeyboardRemove()
+    parse_mode=ParseMode.HTML
 ))
 dp = Dispatcher()
 
