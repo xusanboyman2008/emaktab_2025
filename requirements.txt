@@ -5,6 +5,7 @@ blinker==1.7.0
 asyncpg
 aiogram
 telegraph
+flask
 aiosqlite
 sqlalchemy
 apscheduler
