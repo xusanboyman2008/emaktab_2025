@@ -17,7 +17,7 @@ import asyncio
 #                   "Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
 #     "x-hash": "eyJ1c2VyIjoie1wiaWRcIjo4MjA0OTQzMDI4LFwiZmlyc3RfbmFtZVwiOlwiLlwiLFwibGFzdF9uYW1lXCI6XCJcIixcInVzZXJuYW1lXCI6XCJSTkdfU0NBTVwiLFwibGFuZ3VhZ2VfY29kZVwiOlwiZW5cIixcImFsbG93c193cml0ZV90b19wbVwiOnRydWUsXCJwaG90b191cmxcIjpcImh0dHBzOlxcL1xcL3QubWVcXC9pXFwvdXNlcnBpY1xcLzMyMFxcLzB6cHZRRl9fV3BmZWNJQm5PN2FObkpaTENsdWl3d3FIWFkyaGxYbkhKQ01QODBIaFVBSjVLODNEdGZwZmdhMVAuc3ZnXCJ9IiwiY2hhdF9pbnN0YW5jZSI6IjcwMDEzOTgxNDU0MTAyMTQ3OTYiLCJjaGF0X3R5cGUiOiJzZW5kZXIiLCJhdXRoX2RhdGUiOiIxNzU5Mjk3Njg0Iiwic2lnbmF0dXJlIjoiUUFmYzM4aTFvcG9wUWFrWG0yd1J6MkhpN0dZekROVVdUVHJsTGZMbnp0T25LSDZKTE9NUGhLNFJ2ak9rTjNFSE81VFdENEJ4RFJOUzJKSXJHekF1QlEiLCJoYXNoIjoiMGIyNTkyYTE5ZjQ1NTBiOWQyYjdiNTFmMTU3MzAzYWI3MjhkNjM3YjU2YjYwNTcyMTU2MzlkMDgzNjVhN2VhYSJ9",  # ⚠️ replace with real one
 # }
-URL = "https://gmeow-api-prod.anomalygames.ai/api/pet-action"
+URL = "https://gmeow-api-prod.anomalygames.ai/api/quests"
 HEADERS = {
     "Accept": "*/*",
     "Accept-Encoding": "gzip, deflate, br, zstd",
@@ -38,7 +38,7 @@ HEADERS = {
 # Payload
 payload = {
     "novalink_user_id": "yc0u3xkdjorafmhun4ae1ykk",
-    "cat_id": "25b5b81e-a606-44ec-af4d-add5c4d6f21d"
+    "quest_id":157,
 }
 async def send_request(session, idx: int):
     try:
