@@ -1,4 +1,5 @@
 import asyncio
+import os
 import threading
 
 from bot import dp, bot, login_schedule
@@ -35,8 +36,8 @@ async def main():
 
 
 def run_flask():
-    app.run(debug=True, use_reloader=False,port=0000)  # disable reloader so it doesn’t run twice
-
+    port = int(os.environ.get("PORT", 5000))  # 5000 for local dev, Render will override
+    app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
 
 if __name__ == "__main__":
     try:
