@@ -35,7 +35,7 @@ async def main():
 
 
 def run_flask():
-    app.run(debug=True, use_reloader=False)  # disable reloader so it doesn’t run twice
+    app.run(debug=True, use_reloader=False,port=0000)  # disable reloader so it doesn’t run twice
 
 
 if __name__ == "__main__":
