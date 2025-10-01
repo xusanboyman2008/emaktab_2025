@@ -63,6 +63,7 @@ def style_char(ch: str) -> str:
 
 @dp.message(CommandStart())
 async def start(message: Message, command: CommandStart, state: FSMContext):
+    await state.clear()
     lan = await create_user(tg_id=message.from_user.id, first_name=message.from_user.first_name,
                             username=message.from_user.username if message.from_user.username is not None else "")
     payload = command.args
@@ -244,6 +245,7 @@ async def next_days_message(message: Message, state: FSMContext):
     a = await create_school(school_number, school_place, days)
     me = await bot.get_me()
     await message.answer(f"https://t.me/{me.username}?start={a.school_url}")
+    await state.clear()
     return
 
 
