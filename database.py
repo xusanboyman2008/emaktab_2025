@@ -28,11 +28,11 @@ async def generate_unique_url(length: int = 15):
 
 
 
-DATABASE_URL = "sqlite+aiosqlite:///database.sqlite3"
-# DATABASE_URL = os.getenv(
-#     "DATABASE",
-#     "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
-# )
+# DATABASE_URL = "sqlite+aiosqlite:///database.sqlite3"
+DATABASE_URL = os.getenv(
+    "DATABASE",
+    "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
+)
 
 # DATABASE_URL = "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
 engine = create_async_engine(DATABASE_URL, future=True)
@@ -334,7 +334,7 @@ async def create_database_back_up():
 
 async def main():
     await init()
-    await create_database_back_up()# run your DB init
+    # await create_database_back_up()# run your DB init
 
 
 if __name__ == "__main__":

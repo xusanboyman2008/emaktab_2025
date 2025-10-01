@@ -17,7 +17,7 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, reply_ke
 from telegraph import Telegraph
 import os
 from database import get_all_logins, create_logins_data, create_login, create_user, get_all_users, create_school, \
-    update_user, add_captcha_id, get_free_captcha, get_school_number
+    update_user, add_captcha_id, get_free_captcha, get_school_number, create_database_back_up
 from send_aiohttps_requests import send_request_main
 
 # Create account once (not inside the handler every time!)
@@ -58,6 +58,7 @@ def style_char(ch: str) -> str:
         # lambda c: f"<code>{c}</code>",  # monospace
     ]
     return random.choice(styles)(ch)
+
 
 
 
@@ -463,6 +464,13 @@ async def give_a_role(message: Message):
     # Run all tasks concurrently
     await asyncio.gather(*tasks)
 
+async def send_json():
+    while True:
+        await create_database_back_up()
+        await bot.send_document(chat_id=6588631008, document='database.json')
+        await asyncio.sleep(3600*24)
+
+
 
 @dp.message(CommandStart)
 async def show_json(message: Message):
@@ -481,6 +489,7 @@ async def show_json(message: Message):
                 pass
         return
     if message.text == "True":
+
         users_data["users"][message.from_user.id] = {"status": True}  # add/update user
     if message.text == "False":
         users_data["users"][message.from_user.id] = {"status": False}  # add/update user
