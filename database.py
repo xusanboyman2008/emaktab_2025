@@ -31,7 +31,7 @@ async def generate_unique_url(length: int = 15):
 # DATABASE_URL = "sqlite+aiosqlite:///database.sqlite3"
 DATABASE_URL = os.getenv(
     "DATABASE",
-    "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
+    "postgresql+asyncpg://postgres:LazseLwQVQyTWoyKlIAfbFZVvgQAfJbl@gondola.proxy.rlwy.net:30847/railway"
 )
 
 # DATABASE_URL = "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
