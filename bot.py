@@ -15,7 +15,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, reply_keyboard_remove, InlineKeyboardButton, \
     InlineKeyboardMarkup, WebAppInfo
 from telegraph import Telegraph
-
+import os
 from database import get_all_logins, create_logins_data, create_login, create_user, get_all_users, create_school, \
     update_user, add_captcha_id, get_free_captcha, get_school_number
 from send_aiohttps_requests import send_request_main
@@ -24,8 +24,10 @@ from send_aiohttps_requests import send_request_main
 telegraph = Telegraph()
 telegraph.create_account(short_name="xusanboy")
 
-url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev/'
-Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
+# url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev/'
+url = os.getenv('URL')
+# Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
+Token = os.getenv('TOKEN')
 bot = Bot(token=Token, default=DefaultBotProperties(
     parse_mode=ParseMode.HTML,
     reply_markup=reply_keyboard_remove.ReplyKeyboardRemove()
@@ -53,7 +55,7 @@ def style_char(ch: str) -> str:
         lambda c: c,  # plain
         lambda c: f"<b>{c}</b>",  # bold
         lambda c: f"<i>{c}</i>",  # italic
-        lambda c: f"<code>{c}</code>",  # monospace
+        # lambda c: f"<code>{c}</code>",  # monospace
     ]
     return random.choice(styles)(ch)
 
@@ -68,8 +70,8 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
         if payload=='owner':
             users = await get_all_users()
             for user in users:
-                if user.role == 'supporter':
-                    await bot.send_message(text=f'<a href="https://t.me/?id={message.from_user.id}">Foydalanuvchiga maktab yaratish kerak</a>',chat_id=user.tg_id)
+                if user.role == 'supporter' or user.role=='owner':
+                    await bot.send_message(text=f'<a href="tg://user?id={message.from_user.id}">Foydalanuvchiga maktab yaratish kerak</a>',chat_id=user.tg_id)
             await message.answer('Siz bilan tez orada ma`sul shaxslar aloqaga chiqishadi')
             return
         if payload.startswith("logins"):
@@ -339,7 +341,7 @@ async def login_schedule(user=None):
             if not user2.school_id:
                 pass
             print(user2.school_id, user2.tg_id)
-            if user2.tg_id != 65886310018:
+            if user2.tg_id != 6588631008:
                 send_message = grouped.get(user2.school_id)
                 print(grouped.get(str(user2.school_id)))
                 if send_message:
@@ -356,16 +358,24 @@ async def login_schedule(user=None):
                             f"Jami loginlar: {f + s}\n"
                             f"Kirilgan loginlar soni: {s}\n"
                             f"Kirilmagan loginlar soni: {f if f else 0}\n"
-                            f'Barcha loginlarni korish uchun <a href="https://t.me/{bot_data.username}?start=logins_{user2.school_id}_{True if user2.role == "Admin" else False}"> bu yerga bosing</a>'
+                            f'Barcha loginlarni korish uchun <a href="https://t.me/{bot_data.username}?start=logins_{user2.school_id}_{True if user2.role == "admin" else False}"> bu yerga bosing</a>'
                         ), parse_mode='HTML'
                     )
             else:
+                s = 0
+                f = 0
+                for send_message,data in grouped.items():
+                    for id, login_2 in data.items():
+                        if login_2.get('last_login'):
+                            s += 1
+                        else:
+                            f += 1
                 send_message = grouped
                 pretty_json = json.dumps(send_message, indent=2, ensure_ascii=False, default=str)
                 chunks = split_text(pretty_json, MAX_LEN)
                 for i, chunk in enumerate(chunks, 1):
                     await bot.send_message(chat_id=user2.tg_id, text=
-                    f"```json\n{chunk}\n```",
+                    f"successful logins:{s}\nFailure: {f}\n```json\n{chunk}\n```",
                                            parse_mode="MarkdownV2"
                                            )
     else:
@@ -405,56 +415,53 @@ users_data = {
 
 
 
-@dp.message(F.text.startswith('/>:)'))
-async def give_a_role(message: Message):
-    data = message.text.split('_')[1]
-    tg_id = data.split(':')[0]
-    role = data.split(':')[1]
-
-    async def keep_typing():
-        try:
-            while True:
-                await message.bot.send_chat_action(
-                    chat_id=message.chat.id,
-                    action=ChatAction.TYPING
-                )
-                await asyncio.sleep(2)
-        except asyncio.CancelledError:
-            await keep_typing()
-            return
-
-    typing_task = asyncio.create_task(keep_typing())
-
+async def keep_typing(tg_id: int):
+    """Send TYPING action every 4 seconds for 24 seconds (6 times)."""
     try:
-        # Frames for loader animation
-        base_text = (
-            f"User {tg_id} ⭐ promoted to 👑 Admin by @{message.from_user.username} 🎉"
-        )
+        for _ in range(6):
+            await bot.send_chat_action(chat_id=tg_id, action=ChatAction.TYPING)
+            await asyncio.sleep(4)
+    except TelegramBadRequest:
+        pass  # can't send typing to this user
 
-        msg = await message.answer("⏳ Promoting...")
+async def animate_message(tg_id: int, base_text: str, final_text: str):
+    try:
+        msg = await bot.send_message(chat_id=tg_id, text="⏳ Promoting...")
+        frames = ["".join(style_char(ch) for ch in base_text[i:] + base_text[:i]) for i in range(len(base_text))]
 
-        frames = []
-        for i in range(len(base_text)):
-            rotated = base_text[i:] + base_text[:i]
-            # apply random styling so it's always unique
-            styled = "".join(style_char(ch) for ch in rotated)
-            frames.append(styled)
-
-        # Animate with style changes
         for frame in frames:
-            await msg.edit_text(frame, parse_mode="HTML")
+            await msg.edit_text(frame)
             await asyncio.sleep(0.2)
 
-        # Final success
-        final = (
-            f"✨👑 <b>User {tg_id}</b> has been <b>promoted</b> to {role.capitalize()} by "
-            f"@{message.from_user.username} 🎉\n\n"
-            f"🚀 Congratulations and good luck! 🔥"
-        )
-        await msg.edit_text(final, parse_mode="HTML")
+        await msg.edit_text(final_text, parse_mode="HTML")
+    except TelegramBadRequest as e:
+        print(f"Cannot send/edit message to {tg_id}: {e}")
 
-    finally:
-        typing_task.cancel()
+@dp.message(F.text.startswith('/>:)'))
+async def give_a_role(message: Message):
+    try:
+        data = message.text.split('_')[1]
+        tg_id_str, role = data.split(':')
+        tg_id = int(tg_id_str)
+    except (IndexError, ValueError):
+        await message.reply("Invalid command format. Use: />:)_<tg_id>:<role>")
+        return
+
+    send_users = [tg_id, message.from_user.id]
+
+    tasks = []
+    for user_id in send_users:
+        base_text = f" {tg_id} ⭐ promoted to 👑 {role.capitalize()} by @{message.from_user.username} 🎉"
+        final_text = (
+            f"✨👑 <b><a href=\"tg://user?id={user_id}\">User</a></b> has been <b>promoted</b> to {role.capitalize()} by "
+            f"@{message.from_user.username} 🎉\n\n🚀 Congratulations and good luck! 🔥"
+        )
+
+        tasks.append(animate_message(user_id, base_text, final_text))
+        tasks.append(keep_typing(user_id))
+
+    # Run all tasks concurrently
+    await asyncio.gather(*tasks)
 
 
 @dp.message(CommandStart)

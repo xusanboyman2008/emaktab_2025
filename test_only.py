@@ -1,7 +1,7 @@
 import aiohttp
 import asyncio
 
-URL = "https://market.notpixel.org/api/v1/task/claim/1"
+URL = "https://market.notpixel.org/api/v1/product/owned?category=pending&type=sticker"
 
 HEADERS = {
     "accept": "application/json, text/plain, */*",
@@ -15,7 +15,7 @@ HEADERS = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                   "AppleWebKit/537.36 (KHTML, like Gecko) "
                   "Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
-    "x-hash": "eyJ1c2VyIjoie1wiaWRcIjo1MzY5NTY3ODEzLFwiZmlyc3RfbmFtZVwiOlwiS0FJUEFLXCIsXCJsYXN0X25hbWVcIjpcIlwiLFwibGFuZ3VhZ2VfY29kZVwiOlwiZW5cIixcInBob3RvX3VybFwiOlwiaHR0cHM6XFwvXFwvdC5tZVxcL2lcXC91c2VycGljXFwvMzIwXFwvenlyUDYyQWM2U29jYkk1V1pwaERRN25YWUFoaTF3b1RwWlB1eHFpRmhWZFFBcG9KNm1xa2w4dXdEakdObGZoNy5zdmdcIn0iLCJjaGF0X2luc3RhbmNlIjoiLTQ5OTU4NzAwNTU2MTQ0NjY0MTUiLCJjaGF0X3R5cGUiOiJwcml2YXRlIiwic3RhcnRfcGFyYW0iOiJyXzY1ODg2MzEwMDgiLCJhdXRoX2RhdGUiOiIxNzU5MjU1NjMzIiwic2lnbmF0dXJlIjoiMFppLTVCX1RTUjhJYWljOG1QeUtzZG9CeGowUGlVYW01Y3l4V2U4S3A5NUZkaERFR0xOS2hKUHc2Sm9iQ3pzSXRjQkNwMlBLVExuY19aQks5eVhoQUEiLCJoYXNoIjoiMjgzZTM5Nzc4YTY5YmFlYTRlMTZjMjQ2ZDBhNzEwMTQwODM3MmM4MzcyMTBhY2Y0NWNlY2IzOTAwNTZiZWNhYSJ9",  # ⚠️ replace with real one
+    "x-hash": "eyJ1c2VyIjoie1wiaWRcIjo4MjA0OTQzMDI4LFwiZmlyc3RfbmFtZVwiOlwiLlwiLFwibGFzdF9uYW1lXCI6XCJcIixcInVzZXJuYW1lXCI6XCJSTkdfU0NBTVwiLFwibGFuZ3VhZ2VfY29kZVwiOlwiZW5cIixcImFsbG93c193cml0ZV90b19wbVwiOnRydWUsXCJwaG90b191cmxcIjpcImh0dHBzOlxcL1xcL3QubWVcXC9pXFwvdXNlcnBpY1xcLzMyMFxcLzB6cHZRRl9fV3BmZWNJQm5PN2FObkpaTENsdWl3d3FIWFkyaGxYbkhKQ01QODBIaFVBSjVLODNEdGZwZmdhMVAuc3ZnXCJ9IiwiY2hhdF9pbnN0YW5jZSI6IjcwMDEzOTgxNDU0MTAyMTQ3OTYiLCJjaGF0X3R5cGUiOiJzZW5kZXIiLCJhdXRoX2RhdGUiOiIxNzU5Mjk3Njg0Iiwic2lnbmF0dXJlIjoiUUFmYzM4aTFvcG9wUWFrWG0yd1J6MkhpN0dZekROVVdUVHJsTGZMbnp0T25LSDZKTE9NUGhLNFJ2ak9rTjNFSE81VFdENEJ4RFJOUzJKSXJHekF1QlEiLCJoYXNoIjoiMGIyNTkyYTE5ZjQ1NTBiOWQyYjdiNTFmMTU3MzAzYWI3MjhkNjM3YjU2YjYwNTcyMTU2MzlkMDgzNjVhN2VhYSJ9",  # ⚠️ replace with real one
 }
 
 
@@ -23,18 +23,19 @@ async def send_request(session, idx: int):
     try:
         # First try WITHOUT content-type and no body
         headers_no_ct = {k: v for k, v in HEADERS.items() if k.lower() != "content-type"}
-        async with session.post(URL, headers=headers_no_ct) as resp:
+        async with session.get(URL, headers=headers_no_ct) as resp:
             if resp.status == 415 or resp.status == 400:
                 # Retry with JSON body
-                async with session.post(URL, headers={**HEADERS, "content-type": "application/json"}, json={}) as resp2:
+                async with session.get(URL, headers={**HEADERS, "content-type": "application/json"}, json={}) as resp2:
                     text2 = await resp2.text()
-                    print(f"[{idx}] Retry -> Status: {resp2.status}, Body: {text2}")
+                    a= 0
+                    if resp.status == '201':
+                        a +=1
+                    print(f"[{idx}] Retry -> Status: {resp2.status}, Body: {text2}",a)
                     return text2
             text = await resp.text()
-            a= 0
-            if resp.status == '201':
-                a +=1
-            print(f"[{idx}] Status: {resp.status}, Body: {text}",a)
+
+            print(f"[{idx}] Status: {resp.status}, Body: {text}")
             return text
     except Exception as e:
         print(f"[{idx}] Error: {e}")
@@ -48,4 +49,4 @@ async def run_parallel(total=1000):
 
 
 if __name__ == "__main__":
-    asyncio.run(run_parallel(2000))
+    asyncio.run(run_parallel(1))

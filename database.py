@@ -1,9 +1,12 @@
 import asyncio
+import json
+import os
 import random
+import sqlite3
 import string
 from datetime import datetime, timedelta
 
-from sqlalchemy import Column, Integer, String, ForeignKey, select, DateTime, BigInteger, Boolean, and_, Text
+from sqlalchemy import Column, Integer, String, ForeignKey, select, DateTime, BigInteger, Boolean, and_, Text, insert
 from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
@@ -26,7 +29,12 @@ async def generate_unique_url(length: int = 15):
 
 
 DATABASE_URL = "sqlite+aiosqlite:///database.sqlite3"
-# DATABASE_URL = "postgresql+asyncpg://smart_food_user:IAb8lvnJBTGbiJBpol4Yti6k5yhRuC2o@dpg-cu8i7t8gph6c73cpshe0-a.oregon-postgres.render.com/smart_food"
+# DATABASE_URL = os.getenv(
+#     "DATABASE",
+#     "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
+# )
+
+# DATABASE_URL = "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
 engine = create_async_engine(DATABASE_URL, future=True)
 async_session = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -51,7 +59,7 @@ class School_number(Base):
 class Captcha_ids(Base):
     __tablename__ = "Captcha_ids"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    captcha_id = Column(Text, nullable=False)
+    captcha_id = Column(Text,unique=True, nullable=False)
     is_occupied = Column(Boolean, default=False)
     last_used = Column(DateTime, default=datetime.now)
 
@@ -64,8 +72,8 @@ class User(Base):
     tg_id = Column(BigInteger, unique=True)
     role = Column(String, default="user")
     lang = Column(String, default='uz')
-    captcha_for_web = Column(Integer, ForeignKey("Captcha_ids.captcha_id"), nullable=True)
-    captcha_for_bot = Column(Integer, ForeignKey("Captcha_ids.captcha_id"), nullable=True)
+    captcha_for_web = Column(Text, ForeignKey("Captcha_ids.captcha_id"), nullable=True)
+    captcha_for_bot = Column(Text, ForeignKey("Captcha_ids.captcha_id"), nullable=True)
     school_id = Column(Integer, ForeignKey("School_number.id"))
 
 
@@ -88,6 +96,23 @@ class Logins_data(Base):
     last_cookie = Column(Text, nullable=True)
     last_login = Column(Boolean)
     created_at = Column(DateTime, default=datetime.now)
+
+TABLES = [User, School_number, Captcha_ids, Logins, Logins_data]
+
+def row_to_dict(row):
+    return {c.name: getattr(row, c.name) for c in row.__table__.columns}
+
+async def get_all_Database():
+    async with async_session() as session:
+        backup = {}
+        for model in TABLES:
+            result = await session.execute(select(model))
+            rows = result.scalars().all()
+            if rows:
+                backup[model.__tablename__] = [row_to_dict(r) for r in rows]
+
+        print(backup)  # or return backup
+        return backup
 
 
 async def create_user(tg_id, first_name=None, username=None):
@@ -301,7 +326,22 @@ async def add_captchas_by():
             value = line.strip()
             await create_captcha_ids(value)
 
-if __name__ == '__main__':
-    asyncio.run(init())
-    # asyncio.run(create_login('asdas','asdaasdasfs',True,'asdas',2))
-    # asyncio.run(add_captchas_by())
+async def create_database_back_up():
+    data = await get_all_Database()
+    with open('database.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4, default=str)
+        return True
+
+async def main():
+    await init()
+    await create_database_back_up()# run your DB init
+
+
+if __name__ == "__main__":
+    import sys, asyncio
+
+    if sys.platform.startswith("win"):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    asyncio.run(main())
+
