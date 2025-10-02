@@ -24,7 +24,7 @@ from send_aiohttps_requests import send_request_main
 telegraph = Telegraph()
 telegraph.create_account(short_name="xusanboy")
 
-# url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev/'
+# url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev'
 url = os.getenv('URL',"https://emaktab-2025.onrender.com/")
 # Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
 Token = os.getenv('TOKEN',"7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M")
@@ -287,10 +287,10 @@ async def password(message: Message, state: FSMContext):
         await state.set_state(Next.password)
         await message.answer(f"'{login1}' uchun parolni 🔑 kiriting:")
         return
-    await message.reply(f"Login: {login1}\n Password: {password}\n kirilyapti iltimos kuting....",
+    asa = await message.reply(f"Login: {login1}\n Password: {password}\n kirilyapti iltimos kuting....",
                         reply_markup=reply_keyboard_remove.ReplyKeyboardRemove())
     login = {'1': {'username': login1, 'password': password, 'last_login': False, 'last_cookie': '',
-                   "tg_id": message.from_user.id}}
+                   "tg_id": message.from_user.id,'login_id':False}}
     response = await send_request_main(login)
     print(response)
     bot_username = await bot.get_me()
@@ -311,9 +311,11 @@ async def password(message: Message, state: FSMContext):
     # await message.reply(f"```json\n{pretty_json}\n```",
     #                     parse_mode="MarkdownV2"
     #                     )
+    if response['1']['last_login']:
+        await asa.edit_text(f"{login1} saqlandi va muaffaiyatli kirildi 🎉")
     await state.set_state(Next.login)
     await message.answer(
-        'Keyingi logini kiritng <span class="tg-spoiler">yoki /start ni bosing menuga qaytish uchun </span>')
+        'Keyingi logini kiritng')
     if response["1"]['last_login']:
         await create_login(password=password, username=login1, cookie=response["1"]['last_cookie'], last_login=True,
                            school_number_id=school_id)

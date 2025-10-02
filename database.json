@@ -8,7 +8,7 @@
             "role": "user",
             "lang": "uz",
             "captcha_for_web": "b59b5556-dfc3-4134-b61e-ed3f790894d5",
-            "captcha_for_bot": null,
+            "captcha_for_bot": "ace9be8a-811f-4f46-9c10-2cccc194d528",
             "school_id": 1
         }
     ],
@@ -24,12 +24,6 @@
         }
     ],
     "Captcha_ids": [
-        {
-            "id": 2,
-            "captcha_id": "ace9be8a-811f-4f46-9c10-2cccc194d528",
-            "is_occupied": false,
-            "last_used": "2025-10-01 22:03:04.632665"
-        },
         {
             "id": 3,
             "captcha_id": "0f2f1052-4886-4984-94a6-19b550a956eb",
@@ -599,6 +593,12 @@
             "captcha_id": "68f65c87-04f7-4430-8803-100348d9e381",
             "is_occupied": false,
             "last_used": "2025-10-01 22:04:45.507604"
+        },
+        {
+            "id": 2,
+            "captcha_id": "ace9be8a-811f-4f46-9c10-2cccc194d528",
+            "is_occupied": true,
+            "last_used": "2025-10-01 22:32:13.687900"
         },
         {
             "id": 98,
@@ -4889,6 +4889,18 @@
             "captcha_id": "b59b5556-dfc3-4134-b61e-ed3f790894d5",
             "is_occupied": true,
             "last_used": "2025-10-01 22:23:21.766955"
+        }
+    ],
+    "Logins": [
+        {
+            "id": 1,
+            "school": 1,
+            "username": "xusanboyabdulxayev",
+            "password": "12345678x",
+            "last_cookie": "UZDnevnikAuth_a=RoF07umIYMtCkHrFljdJnY5jhBp0z%2B1uoamZwdqE49krqJw0BfooVNxYl9ELx41KF95qS9V75gtt5b%2B7Yez0r0z7HSm55aekpzyBGlOV7yk9z%2BxS%2FZVxIQ7VnV51GhWas230k4bcN9RT2ciDq9F9B0sTrF7mPI9cSv8i%2FKtKM1r4jQklmfaC0yA2b6ce2oWMWUOVFXyJWuLorFRNi73tAPdIcGV5iX0DoHXHb8qZIAfz3%2FO6czizAvZ44%2BuMRwxYHvH6dQ%3D%3D; a_r_p_i=13.2; dnevnik_rr=False; sst=9b3d70e6-f321-4505-97e2-08c2dfe8263c%7C03%2F10%2F2025%2001%3A10%3A51; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=qm2hlEzDY7P5JxtDrR2YognRzQ36HUDztqDDQAO6aqiv0crush3OZWD8IRyQIbv2VnIc8G9Rs9eISz1Q2b0Mjq%2F9SsV8%2FJJ%2FFk9rVR8fmOVeKUN4QeF0A%2BEX4XQ1o1Z2xnfNyUeOgYW4oD6Z7045ej%2Fej8NpAZZ3k95xU3BD0fGR4NnwZVfejkg9pvm5MFy7Cb%2FB9uXOUeVbm76r8sH3hgFaEoABdddmnlUkyxZ%2BaoDGmQYz24uV1UpAB%2F3pfi9%2FKhgsLu%2Bc%2BePq7BdDopGXscJSiwkqwf%2FhRaIWBWQSRLEBDPo1Nx9pUr4sXM2talFnkl1KNw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 06:10:53.516309",
+            "updated_at": null
         }
     ]
 }

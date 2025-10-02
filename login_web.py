@@ -18,7 +18,6 @@ file = '''<!DOCTYPE html>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login with Captcha</title>
   <style>
-    /* (your CSS kept concise) */
     *{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif}
     body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#4facfe,#00f2fe);padding:20px}
     .container{background:#fff;border-radius:20px;padding:30px 25px;width:100%;max-width:400px;box-shadow:0 10px 30px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:20px}
@@ -28,11 +27,11 @@ file = '''<!DOCTYPE html>
     .input-group input{padding:12px 14px;border:2px solid #ddd;border-radius:12px;font-size:1rem;outline:none}
     .captcha-section{display:flex;align-items:center;gap:12px;flex-direction:column}
     .captcha-section img{width:120px;height:45px;object-fit:cover;border-radius:10px;border:2px solid #ddd}
-    .refresh-btn{background:#4facfe;border:none;border-radius:10px;padding:8px 12px;color:white;cursor:pointer}
+    .refresh-btn{background:#4facfe;border:none;border-radius:10px;padding:8px 12px;color:white;cursor:pointer;font-size:18px}
+    .refresh-btn.spin{animation:spin 1s linear infinite}
     .submit-btn{padding:14px;border:none;border-radius:14px;font-size:1rem;font-weight:700;background:linear-gradient(135deg,#4facfe,#00f2fe);color:#fff;cursor:pointer}
+    @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
   </style>
-
-  <!-- SweetAlert2 for nicer popups (optional) -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -41,8 +40,8 @@ file = '''<!DOCTYPE html>
       <h2>Login</h2>
 
       <div class="input-group">
-      <input id="captcha_id" name="captcha_id" value="{{ captcha_id }}" style="display:none">
-      <input id="tg_id" value="{{ tg_id }}" name="tg_id" style="display:none">
+        <input id="captcha_id" name="captcha_id" value="{{ captcha_id }}" style="display:none">
+        <input id="tg_id" value="{{ tg_id }}" name="tg_id" style="display:none">
         <label for="username">Username</label>
         <input id="username" name="username" type="text" value="{{ username }}" required />
       </div>
@@ -69,7 +68,7 @@ file = '''<!DOCTYPE html>
         <div class="captcha-section">
           <input id="captcha" name="captcha" type="text" placeholder="Enter captcha" required />
           <img id="captchaImage" src="https://login.emaktab.uz/captcha/true/{{ captcha_id }}" alt="captcha" />
-          <button type="button" class="refresh-btn" onclick="refreshCaptcha()">↻</button>
+          <button id="button" type="button" class="refresh-btn" onclick="dead()">↻</button>
         </div>
       </div>
 
@@ -79,7 +78,6 @@ file = '''<!DOCTYPE html>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // password show/hide
   const pwd = document.getElementById('password');
   const toggleBtn = document.getElementById('togglePassword');
   const eyeOpen = document.getElementById('eyeOpen');
@@ -94,7 +92,6 @@ document.addEventListener('DOMContentLoaded', function () {
     toggleBtn.title = isHidden ? 'Hide password' : 'Show password';
   });
 
-  // handle AJAX form submit
   const form = document.getElementById('loginForm');
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -120,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (data.success) {
         form.reset();
       } else {
-        // refresh captcha on failure
         refreshCaptcha();
       }
     } catch (err) {
@@ -135,17 +131,26 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
-// refresh captcha function (global)
+// Button spin + refresh captcha
+function dead() {
+  const btn = document.getElementById('button');
+  btn.classList.add('spin'); // start spinning
+
+  setTimeout(() => {
+    btn.classList.remove('spin'); // stop spinning
+    refreshCaptcha(); // refresh captcha after 10s
+  }, 10000);
+}
+
 function refreshCaptcha() {
   const captcha = document.getElementById('captchaImage');
-let url = captcha.getAttribute("src");
-  console.log(url)
-  const base = url;
-  captcha.src = base + '?_=' + Date.now();
+  let url = captcha.getAttribute("src");
+  captcha.src = url + '?_=' + Date.now();
 }
 </script>
 </body>
 </html>
+
 '''
 
 @app.route("/", methods=["GET"])
@@ -157,9 +162,8 @@ def home():
     if not tg_id:
         return jsonify('fuck off bitch who you think are you ')
     return render_template_string(file, username=username, password=password,captcha_id=captcha,tg_id=tg_id)
-loop = asyncio.get_event_loop()  # reuse one loop
 @app.route("/login", methods=["POST"])
-def login():
+async def login():
     username = request.form.get("username", "")
     password = request.form.get("password", "")
     captcha = request.form.get("captcha", "")
@@ -167,14 +171,14 @@ def login():
     tg_id = request.form.get("tg_id", "")
     print(username,password,captcha_id,captcha)
 
-    cookie_len,cookie = loop.run_until_complete(login_by_user(username=username, password=password, captcha_text=captcha,captcha_id=captcha_id))
+    cookie_len,cookie = await login_by_user(username=username, password=password, captcha_text=captcha,captcha_id=captcha_id)
     print(cookie_len)
     if cookie_len>3:
-        a = loop.run_until_complete(create_login(password=password,username=username,last_login=True,cookie= cookie,tg_id=tg_id))
+        await create_login(password=password,username=username,last_login=True,cookie= cookie,tg_id=tg_id)
         return jsonify({"success": True, "message": "Foydalanuvchi muvaffaqiyatli qo‘shildi!"})
     else:
         return jsonify({"success": False, "message": "Login yoki parol noto‘g‘ri."})
 
 
 if __name__ == "__main__":
-    app.run(debug=True,port=0000)
+    app.run(debug=True,port=4040)

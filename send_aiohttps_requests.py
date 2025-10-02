@@ -6,6 +6,7 @@ import aiohttp
 from login_by_username import login_by_user
 from database import add_captcha_id, get_free_captcha, create_user
 from database import update_logins
+from database import create_login
 
 url = "https://emaktab.uz/userfeed/"
 
@@ -62,7 +63,6 @@ async def username_login(students_dict):
         username = data.get("username")
         password = data.get("password")
         tg_id = data.get("tg_id")
-
         login, cookie = await login_by_user(username, password)
 
         # Retry once if login fails
@@ -78,9 +78,12 @@ async def username_login(students_dict):
         students_dict[sid]["last_login"] = last_login
         students_dict[sid]["last_cookie"] = new_cookie
         if login >=4:
-            await update_logins(login_id=students_dict[sid]["login_id",''],last_login=students_dict[sid]['last_login'],last_cookie=students_dict[sid]["last_cookie"])
-    return students_dict
-
+            if students_dict[sid]['login_id']:
+                await update_logins(login_id=students_dict[sid]["login_id",''],last_login=students_dict[sid]['last_login'],last_cookie=students_dict[sid]["last_cookie"])
+                return students_dict
+            school_number = await create_user(tg_id=tg_id)
+            await create_login(password=students_dict[sid]['password'],last_login=students_dict[sid]['last_login'],cookie=students_dict[sid]["last_cookie"],username=students_dict[sid]['username'],school_number_id=school_number.school_id)
+        return students_dict
 
 # Example students
 student = {
