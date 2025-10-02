@@ -327,6 +327,16 @@ async def create_or_change_user_role(user_tg,role='Admin'):
                 return True
             return False
 
+async def get_all_schools():
+    async with async_session() as session:
+        async with session.begin():
+            a = await session.execute(select(School_number))
+            r = a.scalars().all()
+            if r:
+                return r
+            return False
+
+
 async def init():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -345,11 +355,12 @@ async def create_database_back_up():
 
 async def main():
     await init()
-    # await add_captchas_by()
+    await add_captchas_by()
     # await create_database_back_up()# run your DB init
+
+
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-    asyncio.run(get_all_captcha())
 

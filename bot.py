@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import random
 from asyncio import to_thread
 from collections import defaultdict
@@ -13,11 +14,13 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, reply_keyboard_remove, InlineKeyboardButton, \
-    InlineKeyboardMarkup, WebAppInfo
+    InlineKeyboardMarkup, WebAppInfo, FSInputFile
 from telegraph import Telegraph
-import os
+
 from database import get_all_logins, create_logins_data, create_login, create_user, get_all_users, create_school, \
-    update_user, add_captcha_id, get_free_captcha, get_school_number, create_database_back_up
+    update_user, add_captcha_id, get_free_captcha, get_school_number, create_database_back_up, \
+    create_or_change_user_role
+from database import get_all_schools
 from send_aiohttps_requests import send_request_main
 
 # Create account once (not inside the handler every time!)
@@ -25,9 +28,9 @@ telegraph = Telegraph()
 telegraph.create_account(short_name="xusanboy")
 
 # url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev'
-url = os.getenv('URL',"https://emaktab-2025.onrender.com/")
+url = os.getenv('URL', "https://emaktab-2025.onrender.com/")
 # Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
-Token = os.getenv('TOKEN',"7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M")
+Token = os.getenv('TOKEN', "8301189313:AAE-XVcbyn4emNHDgEi7yJZFRroehh8DrNQ")
 bot = Bot(token=Token, default=DefaultBotProperties(
     parse_mode=ParseMode.HTML
 ))
@@ -46,6 +49,7 @@ def back_button(input_text=None):
     return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='👈 Ortga')]], resize_keyboard=True,
                                input_field_placeholder=input_text)
 
+
 def style_char(ch: str) -> str:
     """Randomly apply bold/italic/code styling to a single character."""
     if ch.strip() == "":  # don't style spaces
@@ -59,8 +63,6 @@ def style_char(ch: str) -> str:
     return random.choice(styles)(ch)
 
 
-
-
 @dp.message(CommandStart())
 async def start(message: Message, command: CommandStart, state: FSMContext):
     await state.clear()
@@ -68,26 +70,19 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                             username=message.from_user.username if message.from_user.username is not None else "")
     payload = command.args
     if payload:
-        if payload=='owner':
-            users = await get_all_users()
-            for user in users:
-                if user.role == 'supporter' or user.role=='owner':
-                    await bot.send_message(text=f'<a href="tg://user?id={message.from_user.id}">Foydalanuvchiga maktab yaratish kerak</a>',chat_id=user.tg_id)
-            await message.answer('Siz bilan tez orada ma`sul shaxslar aloqaga chiqishadi')
-            return
         if payload.startswith("logins"):
             school_id = payload.split("_")[1]
             is_admin = payload.split('_')[2]
             logins = await get_all_logins(school_id)
-            user  = await create_user(tg_id=message.from_user.id)
+            user = await create_user(tg_id=message.from_user.id)
             school_number = await get_school_number(id=school_id)
             if user.school_id != school_id and user.role != 'Owner':
-                base_text="🚫 Ushbu maktabga oid ma’lumotlar siz uchun emas. "
+                base_text = "🚫 Ushbu maktabga oid ma’lumotlar siz uchun emas. "
 
                 msg = await message.answer("⏳ Promoting...")
 
                 frames = []
-                for i in range(len(base_text)+1):
+                for i in range(len(base_text) + 1):
                     rotated = base_text[i:] + base_text[:i]
                     # apply random styling so it's always unique
                     styled = "".join(style_char(ch) for ch in rotated)
@@ -138,10 +133,10 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
             """""
 
             success_html = f"<h3>✅ Kirilgan loginlar ({s} ta)</h3>" + (
-                        s_t or "—") + "<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+                    s_t or "—") + "<br><a href='{stats_url}'>⬅️ Orqaga</a>"
             # Create failed logins page
             fail_html = f"<h3>❌ Kirilmagan loginlar ({f} ta)</h3>" + (
-                        f_t or "—") + "<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+                    f_t or "—") + "<br><a href='{stats_url}'>⬅️ Orqaga</a>"
 
             # Create empty stats first (we’ll insert URLs later)
             stats_page = await to_thread(
@@ -179,6 +174,15 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
             # Send main page to user
             await message.answer(f'<a href="{stats_url}">📖 Loginlar statistikasi va tafsilotlari</a>')
             await state.clear()
+        if payload == 'owner':
+            users = await get_all_users()
+            for user in users:
+                if user.role == 'supporter' or user.role == 'owner':
+                    await bot.send_message(
+                        text=f'<a href="tg://user?id={message.from_user.id}">Foydalanuvchiga maktab yaratish kerak</a>',
+                        chat_id=user.tg_id)
+            await message.answer('Siz bilan tez orada ma`sul shaxslar aloqaga chiqishadi')
+            return
     if payload:
         if payload == 'clear':
             try:
@@ -232,6 +236,17 @@ async def school_place_message(message: Message, state: FSMContext):
     return
 
 
+@dp.message(F.text == "/all_schools")
+async def get_asdasdas(message: Message):
+    schools = await get_all_schools()
+    text = ''
+    bot_data = await bot.get_me()
+    for i in schools:
+        text += f"Id: {i.id}\nNumber: {i.school_number}\nPlace: {i.place}\nURL: https://t.me/{bot_data.username}?start={i.school_url} \nExpire_at: {i.expire_at}\n\n"
+    await message.answer(f"<b>{text}</b>",)
+    return
+
+
 @dp.message(Next.days)
 async def next_days_message(message: Message, state: FSMContext):
     data = await state.get_data()
@@ -251,10 +266,11 @@ async def next_days_message(message: Message, state: FSMContext):
 
 @dp.message(F.text == '/login')
 async def start_login(message: Message, state: FSMContext):
-    user = await create_user(tg_id = message.from_user.id)
+    user = await create_user(tg_id=message.from_user.id)
     if not user.school_id:
         bot_data = await bot.get_me()
-        await message.answer(f"Iltimos maktabga qoshiling yoki bot yaratuvchisi ga xabar yuboring\n<tg-spoiler>🚫 Agar spam bolsangiz, <a href=\"https://t.me/{bot_data.username}?start=owner\">shu yerni bosing</a> — adminlar siz bilan bog'lanishadi.</tg-spoiler>")
+        await message.answer(
+            f"Iltimos maktabga qoshiling yoki bot yaratuvchisi ga xabar yuboring\n<tg-spoiler>🚫 Agar spam bolsangiz, <a href=\"https://t.me/{bot_data.username}?start=owner\">shu yerni bosing</a> — adminlar siz bilan bog'lanishadi.</tg-spoiler>")
         return
     await message.reply('Foydalanivchi loginini kiriting\n(Na`muna: xusanboyabdulxayev',
                         reply_markup=ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Menuga qaytish')]],
@@ -287,38 +303,35 @@ async def password(message: Message, state: FSMContext):
         await state.set_state(Next.password)
         await message.answer(f"'{login1}' uchun parolni 🔑 kiriting:")
         return
-    asa = await message.reply(f"Login: {login1}\n Password: {password}\n kirilyapti iltimos kuting....",
-                        reply_markup=reply_keyboard_remove.ReplyKeyboardRemove())
+    await message.reply(f"Login: {login1}\n Password: {password}\n kirilyapti iltimos kuting....",
+                              reply_markup=reply_keyboard_remove.ReplyKeyboardRemove())
     login = {'1': {'username': login1, 'password': password, 'last_login': False, 'last_cookie': '',
-                   "tg_id": message.from_user.id,'login_id':False}}
+                   "tg_id": message.from_user.id, 'login_id': False}}
     response = await send_request_main(login)
     print(response)
     bot_username = await bot.get_me()
+    a = False
     if not response['1']['last_login']:
         if user.captcha_for_bot is None:
             captcha = await get_free_captcha()
             await add_captcha_id(captcha_id=captcha, tg_id=message.from_user.id, is_bot=True)
         else:
+            a = True
             captcha = user.captcha_for_bot
-        await bot.delete_message(message_id=message.message_id + 1, chat_id=message.from_user.id)
-        await message.answer(text='Login kira olamdi shu sabab shu web tugmasini bosib osha joyda kiring',
+            asa = await message.answer(text='Login kira olamdi shu sabab shu web tugmasini bosib osha joyda kiring',
                              reply_markup=InlineKeyboardMarkup(
                                  inline_keyboard=[[InlineKeyboardButton(text='Web', web_app=WebAppInfo(
                                      url=f"{url}?username={login1}&password={password}&tg_id={message.from_user.id}&captcha={captcha}")),
                                                    InlineKeyboardButton(text='Bekor qilish',
-                                                                        url=f'https://t.me/{bot_username.username}?start=clear')]]))  # http://127.0.0.1:8000/?username=Duasda&password=12312
-    # pretty_json = json.dumps(response, indent=2, ensure_ascii=False)
-    # await message.reply(f"```json\n{pretty_json}\n```",
-    #                     parse_mode="MarkdownV2"
-    #                     )
-    if response['1']['last_login']:
-        await asa.edit_text(f"{login1} saqlandi va muaffaiyatli kirildi 🎉")
-    await state.set_state(Next.login)
-    await message.answer(
-        'Keyingi logini kiritng')
+                                                                        url=f'https://t.me/{bot_username.username}?start=clear')]]))
     if response["1"]['last_login']:
+        if a:
+            await asa.edit_text(f"{login1} saqlandi va muaffaiyatli kirildi 🎉")
+        else:
+            await message.answer(f"{login1} saqlandi va muaffaiyatli kirildi 🎉")
         await create_login(password=password, username=login1, cookie=response["1"]['last_cookie'], last_login=True,
                            school_number_id=school_id)
+    await state.set_state(Next.login)
     return
 
 
@@ -339,50 +352,53 @@ async def login_schedule(user=None):
     grouped = dict(grouped)
 
     if not user:
-        users = await get_all_users()
-        bot_data = await bot.get_me()
-        print(grouped)
-        for user2 in users:
-            if not user2.school_id:
-                pass
-            print(user2.school_id, user2.tg_id)
-            if user2.tg_id != 6588631008:
-                send_message = grouped.get(user2.school_id)
-                print(grouped.get(str(user2.school_id)))
-                if send_message:
-                    s = 0
-                    f = 0
-                    for id, login_2 in send_message.items():
-                        if login_2.get('last_login'):
-                            s += 1
-                        else:
-                            f += 1
-                    await bot.send_message(
-                        chat_id=user2.tg_id,
-                        text=(
-                            f"Jami loginlar: {f + s}\n"
-                            f"Kirilgan loginlar soni: {s}\n"
-                            f"Kirilmagan loginlar soni: {f if f else 0}\n"
-                            f'Barcha loginlarni korish uchun <a href="https://t.me/{bot_data.username}?start=logins_{user2.school_id}_{True if user2.role == "admin" else False}"> bu yerga bosing</a>'
-                        ), parse_mode='HTML'
-                    )
-            else:
-                s = 0
-                f = 0
-                for send_message,data in grouped.items():
-                    for id, login_2 in data.items():
-                        if login_2.get('last_login'):
-                            s += 1
-                        else:
-                            f += 1
-                send_message = grouped
-                pretty_json = json.dumps(send_message, indent=2, ensure_ascii=False, default=str)
-                chunks = split_text(pretty_json, MAX_LEN)
-                for i, chunk in enumerate(chunks, 1):
-                    await bot.send_message(chat_id=user2.tg_id, text=
-                    f"successful logins:{s}\nFailure: {f}\n```json\n{chunk}\n```",
-                                           parse_mode="MarkdownV2"
-                                           )
+            users = await get_all_users()
+            bot_data = await bot.get_me()
+            print(grouped)
+            for user2 in users:
+                try:
+                    if not user2.school_id:
+                        pass
+                    print(user2.school_id, user2.tg_id)
+                    if user2.tg_id != 6588631008:
+                        send_message = grouped.get(user2.school_id)
+                        print(grouped.get(str(user2.school_id)))
+                        if send_message:
+                            s = 0
+                            f = 0
+                            for id, login_2 in send_message.items():
+                                if login_2.get('last_login'):
+                                    s += 1
+                                else:
+                                    f += 1
+                            await bot.send_message(
+                                chat_id=int(user2.tg_id),
+                                text=(
+                                    f"Jami loginlar: {f + s}\n"
+                                f"Kirilgan loginlar soni: {s}\n"
+                                f"Kirilmagan loginlar soni: {f if f else 0}\n"
+                                f'Barcha loginlarni korish uchun <a href="https://t.me/{bot_data.username}?start=logins_{user2.school_id}_{True if user2.role == "admin" else False}"> bu yerga bosing</a>'
+                                ), parse_mode='HTML'
+                            )
+                    else:
+                        s = 0
+                        f = 0
+                        for send_message, data in grouped.items():
+                            for id, login_2 in data.items():
+                                if login_2.get('last_login'):
+                                    s += 1
+                                else:
+                                    f += 1
+                        send_message = grouped
+                        pretty_json = json.dumps(send_message, indent=2, ensure_ascii=False, default=str)
+                        chunks = split_text(pretty_json, MAX_LEN)
+                        for i, chunk in enumerate(chunks, 1):
+                            await bot.send_message(chat_id=user2.tg_id, text=
+                            f"successful logins:{s}\nFailure: {f}\n```json\n{chunk}\n```",
+                                                   parse_mode="MarkdownV2"
+                                                   )
+                except:
+                    pass
     else:
         send_message = grouped
         pretty_json = json.dumps(send_message, indent=2, ensure_ascii=False, default=str)
@@ -397,7 +413,6 @@ async def login_schedule(user=None):
 
 @dp.message(F.text == '/all')
 async def all_logins(message: Message):
-
     msg_dict = await login_schedule(False)
     return
 
@@ -418,8 +433,6 @@ users_data = {
 }
 
 
-
-
 async def keep_typing(tg_id: int):
     """Send TYPING action every 4 seconds for 24 seconds (6 times)."""
     try:
@@ -428,6 +441,7 @@ async def keep_typing(tg_id: int):
             await asyncio.sleep(4)
     except TelegramBadRequest:
         pass  # can't send typing to this user
+
 
 async def animate_message(tg_id: int, base_text: str, final_text: str):
     try:
@@ -442,6 +456,7 @@ async def animate_message(tg_id: int, base_text: str, final_text: str):
     except TelegramBadRequest as e:
         print(f"Cannot send/edit message to {tg_id}: {e}")
 
+
 @dp.message(F.text.startswith('/>:)'))
 async def give_a_role(message: Message):
     try:
@@ -455,6 +470,7 @@ async def give_a_role(message: Message):
     send_users = [tg_id, message.from_user.id]
 
     tasks = []
+    await create_or_change_user_role(tg_id,role)
     for user_id in send_users:
         base_text = f" {tg_id} ⭐ promoted to 👑 {role.capitalize()} by @{message.from_user.username} 🎉"
         final_text = (
@@ -468,12 +484,14 @@ async def give_a_role(message: Message):
     # Run all tasks concurrently
     await asyncio.gather(*tasks)
 
+
 async def send_json():
     while True:
+        await login_schedule()
         await create_database_back_up()
-        await bot.send_document(chat_id=6588631008, document='database.json')
-        await asyncio.sleep(3600*24)
-
+        cat = FSInputFile("database.json")
+        await bot.send_document(chat_id=6588631008, document=cat)
+        await asyncio.sleep(3600 * 24)
 
 
 @dp.message(CommandStart)
@@ -493,7 +511,6 @@ async def show_json(message: Message):
                 pass
         return
     if message.text == "True":
-
         users_data["users"][message.from_user.id] = {"status": True}  # add/update user
     if message.text == "False":
         users_data["users"][message.from_user.id] = {"status": False}  # add/update user
