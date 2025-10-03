@@ -25,7 +25,7 @@ def run_flask():
 
 async def run_flask2():
     config = Config()
-    config.bind = ["127.0.0.1:8000"]
+    config.bind = ["0.0.0.0:8000"]
     await serve(app, config)
 
 async def joind():
