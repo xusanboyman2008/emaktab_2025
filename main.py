@@ -18,16 +18,16 @@ async def main2():
 
 
 def run_flask():
-    port = int(os.environ.get("PORT", 5000))  # 5000 for local dev, Render will override
+    port = int(os.environ.get("PORT", 8080))  # 5000 for local dev, Render will override
     app.run(port=port, debug=False, use_reloader=False)
 
 if __name__ == "__main__":
     try:
         print("bot started")
         #
-        # # # Start Flask in a thread
-        # flask_thread = threading.Thread(target=run_flask)
-        # flask_thread.start()
+        # # Start Flask in a thread
+        flask_thread = threading.Thread(target=run_flask)
+        flask_thread.start()
 
         # Run bot loop
         asyncio.run(main2())
