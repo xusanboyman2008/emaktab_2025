@@ -25,9 +25,9 @@ if __name__ == "__main__":
     try:
         print("bot started")
         #
-        # # Start Flask in a thread
-        flask_thread = threading.Thread(target=run_flask)
-        flask_thread.start()
+        # # # Start Flask in a thread
+        # flask_thread = threading.Thread(target=run_flask)
+        # flask_thread.start()
 
         # Run bot loop
         asyncio.run(main2())
