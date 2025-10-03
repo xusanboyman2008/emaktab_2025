@@ -11,3 +11,4 @@ aiosqlite
 sqlalchemy
 apscheduler
 flask[async]
+gunicorn
