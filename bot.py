@@ -487,6 +487,7 @@ async def give_a_role(message: Message):
 
 async def send_json():
     while True:
+        await asyncio.sleep(60)
         await login_schedule()
         await create_database_back_up()
         cat = FSInputFile("database.json")
