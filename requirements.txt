@@ -9,4 +9,5 @@ flask
 aiosqlite
 sqlalchemy
 hypercorn
+quart
 flask[async]

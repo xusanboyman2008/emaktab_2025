@@ -1,14 +1,9 @@
-import asyncio
-
-from flask import Flask, request, render_template_string, jsonify
-import secrets
-import requests
+from quart import Quart, request, render_template_string, jsonify
 
 from database import create_login
 from login_by_username import login_by_user
 
-app = Flask(__name__)
-app.secret_key = secrets.token_urlsafe(32)
+app = Quart(__name__)
 captcha_id = "859746ee-eb11-4ec1-9771-b835c710941b"
 
 file = '''<!DOCTYPE html>
@@ -155,32 +150,37 @@ function refreshCaptcha() {
 
 '''
 
+
 @app.route("/", methods=["GET"])
-def home():
+async def home():
     username = request.args.get("username", "")
     password = request.args.get("password", "")
     tg_id = request.args.get("tg_id", "")
-    captcha = request.args.get("captcha",captcha_id)
+    captcha = request.args.get("captcha", captcha_id)
     if not tg_id:
         return jsonify('fuck off bitch who you think are you ')
-    return render_template_string(file, username=username, password=password,captcha_id=captcha,tg_id=tg_id)
+    return await render_template_string(file, username=username, password=password, captcha_id=captcha, tg_id=tg_id)
+
+
 @app.route("/login", methods=["POST"])
 async def login():
-    username = request.form.get("username", "")
-    password = request.form.get("password", "")
-    captcha = request.form.get("captcha", "")
-    captcha_id = request.form.get("captcha_id", "")
-    tg_id = request.form.get("tg_id", "")
-    print(username,password,captcha_id,captcha)
+    form = await request.form  # <-- must await
+    username = form.get("username", "")
+    password = form.get("password", "")
+    captcha = form.get("captcha", "")
+    captcha_id = form.get("captcha_id", "")
+    tg_id =form.get("tg_id", "")
+    print(username, password, captcha_id, captcha)
 
-    cookie_len,cookie = await login_by_user(username=username, password=password, captcha_text=captcha,captcha_id=captcha_id)
+    cookie_len, cookie = await login_by_user(username=username, password=password, captcha_text=captcha,
+                                             captcha_id=captcha_id)
     print(cookie_len)
-    if cookie_len>3:
-        await create_login(password=password,username=username,last_login=True,cookie= cookie,tg_id=tg_id)
+    if cookie_len > 3:
+        await create_login(password=password, username=username, last_login=True, cookie=cookie, tg_id=tg_id)
         return jsonify({"success": True, "message": "Foydalanuvchi muvaffaqiyatli qo‘shildi!"})
     else:
         return jsonify({"success": False, "message": "Login yoki parol noto‘g‘ri."})
-
-
-if __name__ == "__main__":
-    app.run(debug=True,port=4040)
+#
+#
+# if __name__ == "__main__":
+#     app.run(debug=True, port=4040)
