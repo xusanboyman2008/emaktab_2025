@@ -19,13 +19,13 @@ async def main2():
 
 
 def run_flask():
-    port = int(os.environ.get("PORT", 8080))  # 5000 for local dev, Render will override
+    port = int(os.environ.get("PORT", 5000))  # 5000 for local dev, Render will override
     app.run(port=port, debug=False, use_reloader=False)
 
 
 async def run_flask2():
     config = Config()
-    config.bind = ["0.0.0.0:8000"]
+    config.bind = ["0.0.0.0:5000"]
     await serve(app, config)
 
 async def joind():
