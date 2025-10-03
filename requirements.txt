@@ -8,4 +8,5 @@ telegraph
 flask
 aiosqlite
 sqlalchemy
+hypercorn
 flask[async]
