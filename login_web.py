@@ -143,6 +143,8 @@ function dead() {
 }
 
 function refreshCaptcha() {
+
+
   const captcha = document.getElementById('captchaImage');
   let url = captcha.getAttribute("src");
   captcha.src = url + '?_=' + Date.now();
