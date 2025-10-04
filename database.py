@@ -276,7 +276,7 @@ async def get_all_logins(school2=None):
     async with async_session() as session:
         async with session.begin():
             if school2:
-                a = await session.execute(select(Logins).where(Logins.school == school2))
+                a = await session.execute(select(Logins).where(Logins.school == int(school2)))
             else:
                 a = await session.execute(select(Logins))
             b = a.scalars().all()

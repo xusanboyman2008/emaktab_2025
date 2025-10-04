@@ -12,7 +12,7 @@ from login_web import app
 
 async def main2():
     await init()
-    # asyncio.create_task(send_json())
+    asyncio.create_task(send_json())
     await dp.start_polling(bot, skip_updates=True)
 
 

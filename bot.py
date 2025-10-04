@@ -73,10 +73,9 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
         if payload.startswith("logins"):
             school_id = payload.split("_")[1]
             is_admin = payload.split('_')[2]
-            logins = await get_all_logins(school_id)
             user = await create_user(tg_id=message.from_user.id)
-            school_number = await get_school_number(id=school_id)
-            if user.school_id != school_id and user.role != 'Owner':
+            school_number = await get_school_number(id=int(school_id))
+            if int(user.school_id) != int(school_id) and user.role != 'Owner':
                 base_text = "🚫 Ushbu maktabga oid ma’lumotlar siz uchun emas. "
 
                 msg = await message.answer("⏳ Promoting...")
@@ -94,6 +93,9 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                     await asyncio.sleep(0.2)
                 await msg.edit_text(base_text)
                 return
+            msg = await message.answer('Iltiomos biroz kutib turing')
+            logins = await get_all_logins(school2=school_id)
+
             s_t, f_t = "", ""
             s, f = 0, 0
 
@@ -102,10 +104,7 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                     return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
 
                 def mask_text(text: str, is_admin: bool) -> str:
-                    if is_admin or len(text) <= 4:
-                        return text
-                    return text[:2] + "*" * (len(text) - 4) + text[-2:]
-
+                    return text[:2] + "*" * 8
                 row = f"""
                 <b>ID:</b> {i.id}<br>
                 <b>👤 Login:</b> {mask_text(i.username, is_admin)}<br>
@@ -172,7 +171,7 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
             )
 
             # Send main page to user
-            await message.answer(f'<a href="{stats_url}">📖 Loginlar statistikasi va tafsilotlari</a>')
+            await msg.edit_text(f'<a href="{stats_url}">📖 Loginlar statistikasi va tafsilotlari</a>',protect_content=True)
             await state.clear()
         if payload == 'owner':
             users = await get_all_users()
@@ -413,7 +412,8 @@ async def login_schedule(user=None):
 
 @dp.message(F.text == '/all')
 async def all_logins(message: Message):
-    msg_dict = await login_schedule(False)
+    await message.answer('Login progress just started')
+    await login_schedule(False)
     return
 
 
@@ -467,14 +467,14 @@ async def give_a_role(message: Message):
         await message.reply("Invalid command format. Use: />:)_<tg_id>:<role>")
         return
 
-    send_users = [tg_id, message.from_user.id]
+    send_users = [message.from_user.id,tg_id]
 
     tasks = []
     await create_or_change_user_role(tg_id,role)
     for user_id in send_users:
         base_text = f" {tg_id} ⭐ promoted to 👑 {role.capitalize()} by @{message.from_user.username} 🎉"
         final_text = (
-            f"✨👑 <b><a href=\"tg://user?id={user_id}\">User</a></b> has been <b>promoted</b> to {role.capitalize()} by "
+            f"✨👑 <b><a href=\"tg://user?id={tg_id}\">User</a></b> has been <b>promoted</b> to {role.capitalize()} by "
             f"@{message.from_user.username} 🎉\n\n🚀 Congratulations and good luck! 🔥"
         )
 
@@ -491,7 +491,10 @@ async def send_json():
         await login_schedule()
         await create_database_back_up()
         cat = FSInputFile("database.json")
-        await bot.send_document(chat_id=6588631008, document=cat)
+        users = await get_all_users()
+        for user in users:
+            if user.role=='owner':
+                await bot.send_document(chat_id=6588631008, document=cat)
         await asyncio.sleep(3600 * 24)
 
 
