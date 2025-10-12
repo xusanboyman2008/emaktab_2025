@@ -141,7 +141,7 @@ async def get_grade(grade=None, id=None):
     async with async_session() as session:
         async with session.begin():
             if id:
-                a = await session.execute(select(Grades).where(Grades.id == id))
+                a = await session.execute(select(Grades).where(Grades.id == int(id)))
             else:
                 a = await session.execute(select(Grades).where(Grades.grade == grade))
             r = a.scalar_one_or_none()
