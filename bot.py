@@ -624,7 +624,8 @@ async def login_schedule(user: int | None = None):
         # If user is not admin — send only their own class info
         else:
             key = (user_obj.school_id, user_obj.grade)
-            send_message = grouped.get(key)
+            send_message2 = grouped.get(user_obj.school_id)
+            send_message = send_message2.get(user_obj.grade)
             if not send_message:
                 return
 

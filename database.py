@@ -373,15 +373,6 @@ async def get_all_logins(school2=None, grade=None):
             else:
                 a = await session.execute(select(Logins))
             b = a.scalars().all()
-            users = []
-            for i in b:
-                print(i.school)
-                school = await get_school_number(id=int(i.school))
-                if not school2 and school == False:
-                    if school.expire_at > datetime.now():
-                        users.append(i)
-                else:
-                    users.append(i)
             return b
 
 
