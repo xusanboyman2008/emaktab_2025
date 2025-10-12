@@ -162,7 +162,7 @@ async def create_user(tg_id, grade=None, first_name=None, username=None):
                 if grade:
                     grade_obj = await get_grade(grade)
                     if grade_obj:
-                        existing_user.grade = grade_obj.id  # or grade_obj if it's a relationship
+                        existing_user.grade = str(grade_obj.id)  # or grade_obj if it's a relationship
                         await session.commit()
                     else:
                         print(f"[WARN] Grade '{grade}' not found in database.")
@@ -179,7 +179,7 @@ async def create_user(tg_id, grade=None, first_name=None, username=None):
             if grade:
                 grade_obj = await get_grade(grade)
                 if grade_obj:
-                    new_user.grade = grade_obj.id  # or grade_obj depending on your model
+                    new_user.grade = str(grade_obj.id)  # or grade_obj depending on your model
                 else:
                     print(f"[WARN] Grade '{grade}' not found in database.")
 
