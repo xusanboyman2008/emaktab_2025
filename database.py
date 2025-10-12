@@ -366,7 +366,7 @@ async def get_all_logins(school2=None, grade=None):
                     a = await session.execute(
                         select(Logins).where(      and_(
                             Logins.school == int(school2),
-                            Logins.grade == grade  # Text column, keep as string
+                            Logins.grade == str(grade)  # Text column, keep as string
                         )))
                 else:
                     a = await session.execute(select(Logins).where(Logins.school == int(school2)))
