@@ -11,25 +11,32 @@ from database import create_login
 url = "https://emaktab.uz/userfeed/"
 
 
-async def fetch(session, student_id, student):
+async def fetch(session, student_id, student, sem):
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Cookie": student["last_cookie"],  # send old cookies
+        "Cookie": student["last_cookie"],
     }
 
-    async with session.get(url, headers=headers) as response:
-        # Collect ALL cookies (old + new) known to session
-        all_cookies = session.cookie_jar.filter_cookies(url)
-        new_cookies = [f"{k}={v.value}" for k, v in all_cookies.items()]
+    async with sem:  # limit concurrency to 50
+        async with session.get(url, headers=headers) as response:
+            all_cookies = session.cookie_jar.filter_cookies(url)
+            new_cookies = [f"{k}={v.value}" for k, v in all_cookies.items()]
 
-        # Consider valid login if page returned 200 and we got any cookies
-        success = True if len(new_cookies) >3 else False
-        return student_id, success, new_cookies
+            print(len(new_cookies), student_id)
+            success = True if len(new_cookies) > 3 else False
+            return student_id, success, new_cookies
 
 
 async def cookie_login(students_dict):
-    async with aiohttp.ClientSession() as session:
-        tasks = [fetch(session, sid, s) for sid, s in students_dict.items()]
+    sem = asyncio.Semaphore(50)  # 👈 limit to 50 concurrent fetches
+    connector = aiohttp.TCPConnector(limit=70)  # also limit open TCP connections
+
+    async with aiohttp.ClientSession(connector=connector) as session:
+        tasks = [
+            fetch(session, sid, s, sem)
+            for sid, s in students_dict.items()
+        ]
+
         results = await asyncio.gather(*tasks)
 
         for sid, success, new_cookies in results:
@@ -37,7 +44,6 @@ async def cookie_login(students_dict):
                 students_dict[sid]["last_login"] = success
                 continue
 
-            # Merge cookies cleanly
             old_cookie = students_dict[sid].get("last_cookie", "")
             cookie = SimpleCookie()
             cookie.load(old_cookie)
@@ -51,7 +57,12 @@ async def cookie_login(students_dict):
             merged_cookie = "; ".join([f"{k}={v.value}" for k, v in cookie.items()])
             students_dict[sid]["last_cookie"] = merged_cookie
             students_dict[sid]["last_login"] = success
-            await update_logins(login_id=students_dict[sid]["login_id"],last_login=students_dict[sid]['last_login'],last_cookie=students_dict[sid]["last_cookie"])
+
+            await update_logins(
+                login_id=students_dict[sid]["login_id"],
+                last_login=success,
+                last_cookie=merged_cookie
+            )
 
         return students_dict
 
@@ -82,7 +93,7 @@ async def username_login(students_dict):
                 await update_logins(login_id=students_dict[sid]["login_id",''],last_login=students_dict[sid]['last_login'],last_cookie=students_dict[sid]["last_cookie"])
                 return students_dict
             school_number = await create_user(tg_id=tg_id)
-            await create_login(password=students_dict[sid]['password'],last_login=students_dict[sid]['last_login'],cookie=students_dict[sid]["last_cookie"],username=students_dict[sid]['username'],school_number_id=school_number.school_id)
+            # await create_login(password=students_dict[sid]['password'],last_login=students_dict[sid]['last_login'],cookie=students_dict[sid]["last_cookie"],username=students_dict[sid]['username'],school_number_id=school_number.school_id,grade=students_dict[sid]['grade'])
         return students_dict
 
 # Example students
@@ -106,7 +117,7 @@ async def send_request_main(students):
     cookie_logins = {}
     username_logins = {}
     for sid, data in students.items():
-        if data['last_login']:
+        if data['last_cookie']:
             cookie_logins[sid] = data
         else:
             username_logins[sid] = data

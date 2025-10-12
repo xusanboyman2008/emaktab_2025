@@ -1,0 +1,925 @@
+{
+    "User": [
+        {
+            "id": 3,
+            "first_name": "Hafizaxon",
+            "username": "",
+            "tg_id": 5432194711,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": null,
+            "captcha_for_bot": null,
+            "school_id": 1
+        },
+        {
+            "id": 1,
+            "first_name": "(►__◄) T_T X_X xusanboyman",
+            "username": "xusanboyman200",
+            "tg_id": 6588631008,
+            "role": "owner",
+            "lang": "uz",
+            "captcha_for_web": "0f2f1052-4886-4984-94a6-19b550a956eb",
+            "captcha_for_bot": "154728c3-5804-4ab5-b07c-1615688880ea",
+            "school_id": 1
+        },
+        {
+            "id": 4,
+            "first_name": "Manzuraxon",
+            "username": "",
+            "tg_id": 6902323937,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": null,
+            "captcha_for_bot": null,
+            "school_id": 1
+        },
+        {
+            "id": 6,
+            "first_name": "Abdilvoxobova",
+            "username": "Abdilvoxobova",
+            "tg_id": 6793461610,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": null,
+            "captcha_for_bot": null,
+            "school_id": 1
+        },
+        {
+            "id": 2,
+            "first_name": "Xusanboy",
+            "username": "Xusanboyman1000",
+            "tg_id": 8416828604,
+            "role": "admin",
+            "lang": "uz",
+            "captcha_for_web": "b59b5556-dfc3-4134-b61e-ed3f790894d5",
+            "captcha_for_bot": "ace9be8a-811f-4f46-9c10-2cccc194d528",
+            "school_id": 1
+        },
+        {
+            "id": 7,
+            "first_name": "M",
+            "username": "",
+            "tg_id": 5840430936,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": null,
+            "captcha_for_bot": null,
+            "school_id": null
+        },
+        {
+            "id": 9,
+            "first_name": "Otabek",
+            "username": "otabek_cp",
+            "tg_id": 8101852689,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": null,
+            "captcha_for_bot": null,
+            "school_id": null
+        },
+        {
+            "id": 8,
+            "first_name": "🇺🇿 Muhammadsiddiq",
+            "username": "Mister_Daho",
+            "tg_id": 6351048042,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": "83e46c8e-1130-4ba7-9db2-e2f0c5834816",
+            "captcha_for_bot": "8fb1ed52-6294-44ba-b589-468a87ec620d",
+            "school_id": 4
+        },
+        {
+            "id": 10,
+            "first_name": "Ifora",
+            "username": "I_ifora009",
+            "tg_id": 1214985492,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": null,
+            "captcha_for_bot": null,
+            "school_id": null
+        },
+        {
+            "id": 11,
+            "first_name": "Bozorova Nozigul Mirzoyevna",
+            "username": "Nozigul_Bozorova17",
+            "tg_id": 1308169582,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": null,
+            "captcha_for_bot": null,
+            "school_id": 4
+        },
+        {
+            "id": 12,
+            "first_name": "Фарида Якубжоновна",
+            "username": "farida0426",
+            "tg_id": 344550296,
+            "role": "user",
+            "lang": "uz",
+            "captcha_for_web": null,
+            "captcha_for_bot": null,
+            "school_id": 1
+        }
+    ],
+    "School_number": [
+        {
+            "id": 1,
+            "school_url": "c9WX0xoAFlC9iAT",
+            "school_number": 14,
+            "place": "Andijon, Marhamat, Rovot MFY",
+            "is_paid": false,
+            "created_at": "2025-10-02 03:41:28.281442",
+            "expire_at": "2025-10-12 03:41:28.280016"
+        },
+        {
+            "id": 2,
+            "school_url": "ZeeLqJ33A0CW3OV",
+            "school_number": 14,
+            "place": "Surxondaryo, Termiz MFY",
+            "is_paid": false,
+            "created_at": "2025-10-05 08:47:23.399509",
+            "expire_at": "2025-10-12 08:47:23.398395"
+        },
+        {
+            "id": 3,
+            "school_url": "kylL2dZPX5OIktw",
+            "school_number": 3,
+            "place": "Andijon viloyati, Marhamat tumani IM",
+            "is_paid": false,
+            "created_at": "2025-10-05 08:48:16.862664",
+            "expire_at": "2025-10-12 08:48:16.862325"
+        },
+        {
+            "id": 4,
+            "school_url": "H4PCObz54eQBQLx",
+            "school_number": 0,
+            "place": "https://t.me/peercodeuz guruhu uchun mahsus",
+            "is_paid": false,
+            "created_at": "2025-10-05 08:54:56.698343",
+            "expire_at": "2025-10-15 08:54:56.698000"
+        }
+    ],
+    "Logins": [
+        {
+            "id": 6,
+            "school": 1,
+            "username": "ergasheva.shahribonu",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=JDCxbhl6J4%2FKDh6BDEjaMB1ET3a9sMpi3RDt4ihw70FyWj90eMn9SxUugmKL%2BuZa9OJQPENZtBDxaBcHu%2FtzK4G20i6zCYWD2fDf6FrteqnGO1euWx7zOz8tWC1YBILet0HxumIeTt3bheAEyJSNPNgML1h74bjF2oQI%2BLyI4RAlv8oFkr3tWlvKm0kSAKohOsiILPd2QdMTMD0Gok%2B%2B5i5%2FuyoRWK4s4TblRZk%2F8oHbmHFXOB5RM6PpClZRqTP%2FVVJFHGxwKPRjYP9vOtZwRItssyJ2zHiAIX64nmZjoH2qAl8YJsCdbqLwuvOs38SYVss4wQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:39:42.850363",
+            "updated_at": "2025-10-11 02:18:41.941870"
+        },
+        {
+            "id": 7,
+            "school": 1,
+            "username": "ishamsiyaxon",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=CmdXWnLhjSPAe%2FSEajjmQKa8jG3cnSrQ%2Bgx%2Fu3%2FfGyVNlM26IFDrDGNd1cfbvS5DxImI4g2xws1b%2BM7z5169yb3b0%2FG3NZixFqK0q97MEU%2BqAT52d7B%2FMwLVORY2k2%2BbY1BAkOHExv6wBPRtz2BIowyrCi1wyeHbqDfdlOVMWsKCfkrorYItp%2FjqnGrWg3jH1PWN8piA7uNnCUTXe6AWlwDafK2uioC0Ifbo%2F0wdl67NXJ2A9SOu0aeTCLGn7b1d6KZtYZ3IjcYss6BuHIbQJzcvaYE0C%2FOiC%2F%2BN2uorATvWOpePKFbIVIgwb%2BHPtBYNmfZBWA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:39:52.645003",
+            "updated_at": "2025-10-11 02:18:41.949095"
+        },
+        {
+            "id": 2,
+            "school": 1,
+            "username": "hasanboyman",
+            "password": "Mymodlyu0",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=mX7iCkJppC6zusOygbzcnTQ2jU09lom5km%2FNJPR5tcWwWxxE4izK3tkzbM5V8FRvqNpZE%2FhDMO2xbvtXn74KWK0jPnoHvXM7m9kPofm1Ue6RxLA1M%2FsoGJO3L42muZEhlvIPvVkpijrxAbD%2FWIlkMe1aodpykkCcDHka5n2KYYD7Wc8BaLgMd1nRtKdCFQlGQao9LTrTBjKF7bEa8oVBMvgaWrwYsXHN9ir%2FITDLEw3DZaoNI8%2BZu%2BN%2Bze5U59EKZ5QXnpv2W%2BWWSTVgP7OysVdespp22CkLPUhKAqkZ3heNmCE1p3Ou4dYIJprprjvsXcEu4Q%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 03:58:46.117355",
+            "updated_at": "2025-10-11 02:18:41.956776"
+        },
+        {
+            "id": 3,
+            "school": 1,
+            "username": "hanifaxonabdullajono",
+            "password": "12345v",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.1; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=%2FB1vYRmfkpkmQAxWimc1AbOJpBvlB1U3Hs4kn1dF6LAjl0W2wSb3oYQ3CF38oWnof6iS4IQaASRUks4RiloJg2EFqHNZr2a91PQtSWWiPPTleh7BlTfniXRK50Z8RmjHvUrMVG8f1fo%2BD58ye7go%2F2oJ7GZHAgjcgCfr3k8UlyXMJs2R3uNTpDVmjo3wyLLsLpwgnpGsszB4hQrHhVXtKbsHvhuOXlIDAfxg%2FGLxd%2FGIDE98%2BL4QtjloQbbelcdAnXVySbDDy2GpDg6w6ZSbgxkE39IHA6ZOApk5tXWNvuFMKiTA9LbmK%2F82SRDCBTvv3cx1ug%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 10:38:16.498407",
+            "updated_at": "2025-10-11 02:18:41.962773"
+        },
+        {
+            "id": 4,
+            "school": 1,
+            "username": "abdumuxtorovy",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=11.1; dnevnik_rr=False; sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=%2BNj1gAeXquVv82JNhHzQpawsxomHN7RdAEz%2FGSShWVRuqiFdMPkmJwpSGN9FsRPWeK3lCIUZWO6xsbDxVOQtKBhpeP1J7LNcje%2Fc0Zz9qnnWav88IXope1XoQROuWRz0ivweGj%2BUZ32qtZTxPKO3bW%2B9s2lPt1e%2B9M1vbOali0xhLFZ4p3hikWOLiUtFxMNPWejXQTsnUuXzYy7oN3yI%2BXQEPmXv0AYruH1yyf1xaMnde1VxzOvl0BSIV7rqHcm5UJyng%2BzR9i5sLWbOhzC7Zuf4KaBNumEOnYNupt2yyh3Kqd2oZkRL8UkEgKmLVyrUX6smEA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:39:01.688616",
+            "updated_at": "2025-10-11 02:18:41.970249"
+        },
+        {
+            "id": 5,
+            "school": 1,
+            "username": "nurziyoergashev",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=pPj12pYVcTjbU6lFYKgqDEgzfI75ON3G1uA0ZBCw7kQZiAvMgl3Tokeh4eT%2BCH79dHTjnsy5VuYTrfh8Q%2Fij5PDddlQUZDddcuDUVmJS83qRWrMhp08BHCkOrnmevJhrjSu0it31p%2FVn09Ea6vVJLQa80zMxAVnOR6m2%2BvOzzBReYOTQ2fI%2FWY07f3pE2jP6wPqFAZjlyHGrp8qFqZWGUjZTlvvzH2MDx9IBF%2B5qE0H6C6M9qI%2FgGJuXk3eWwK7tSNHZGq3yHTmcez6ki5fy3fERyHrQfvi3RIN7fRt1WVzJm9V2%2BKRfipTLjkPwVxHbdQ220Q%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:39:29.059487",
+            "updated_at": "2025-10-11 02:18:41.976244"
+        },
+        {
+            "id": 8,
+            "school": 1,
+            "username": "ruzvonbu",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=Pb2Lc0SavBAqW219ujxtJtfFHFxJgxPfoC7OZ1hBCNqdHztpVc%2F%2BqXkZVRwHAN5esStzmrlqY6YnEMAvE7GOFhRPTpdFTWKBppV9VJjZ1upF5%2Bw1eLSCknCKCykyOH3sdEohjF3NGygkHaXtKVJEFbDjUizfjJsmrhyNfT0J4gQ5UvxbhsOcUmFcaPIUgA3YAPwK3YGJCNQtGMJYuV5WG981ApFyU%2FRulB8Lf7YzB6Pdl4hU1RZpjv37UG265Wlv2LJE6x7r4pCEI9zzywb153FJRCW%2BrWDT2kUIBd9sM0rQKQnwE60%2BY7DTU59UzDQzoK2NkA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:39:59.699675",
+            "updated_at": "2025-10-11 02:18:41.927468"
+        },
+        {
+            "id": 9,
+            "school": 1,
+            "username": "mahamatjonovmuhammad",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=Pv8fBvDmbdD3VVA52QQ7XNhhUj0m47aswcAXrepYPVMYNjn8gPRBnwTSrA0Vv%2BPyqsKFkDDAJntiHGoouRsuQEO4LPwLPhyVdLxBFYKL142J%2BuMuYktlc57A1nBqbNnjCRM23T4Na%2BVkGNniVJQlq625sqnM3WYfogIwttg1rNZoY%2Fl7kLNXLz8tXzRvXGCXrxhJCDduIq6E3OmXOvbiBrtgvkVOnwhQ5Cq3SdM8qbAZohGjjOLdkBfRX0Bflt2X2BZYRT2vicPb%2F8sFBv4jsBIiBYkjihxXl8iE9YuEKT5R1yVYzXDvgjybyydz6VYxAqGUjw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:40:10.731459",
+            "updated_at": "2025-10-11 02:18:41.934302"
+        },
+        {
+            "id": 15,
+            "school": 1,
+            "username": "charosxontoirjonova",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=xOzWunHCRDBiEZoAikdbVhGvOZ3g84dfB6fxYj56JAyTMOCHeVSEUHfcgZL7yTaaxjSOCMXV%2BeGcHPVOauMIhETwqVQXHdfBXzvshbPM6wGwYukhgDS5E%2BM1REcgpC4A1LqIcBd0RX%2FAeHqRFfssJJ0TGNKf1yETMky4nGCxrJgc8h0am7UCFQu%2FgghrT%2Fk0iQqa5Lkh4RgSCxqKqeJ%2BvsflnbkYqLmvzGJNS7KMuZQ4K3qI6vDu9yciLaRxYViF7r5KqkyGywIhOUxNa7FwMWxMnGtXe8JKY0yQd935TVOVhDLjSNkiYyWXfTtWMX%2FUjMf2eQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:43:33.870102",
+            "updated_at": "2025-10-11 02:18:41.988769"
+        },
+        {
+            "id": 18,
+            "school": 1,
+            "username": "muhammadziyoyunusali",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=ZWhJ4icEEOEg2KnYM5ArXhPMrPCWfdTZn3ErWK9Mha%2BJv%2BegLi9RvJ4uxFPtxxybUA1SBOhojBU0BOSQqCeaRLJrDRXqK%2BVCUjHDKVhqkO9FgV1DFHBmaj3S7ZORqP6FLE1qFHydX3Y3v7EwjHMSN1YaiIwC0o5QDniVhqTvdDRBfAStfq5WQXbjTV2ddFyA85QjO7UQO8HGbGVCtUZJgwZINK45%2FxwUFo2QeEX8gyRGZLLR%2B0TCIkpZ1r6a0DLKhRsqd2GXfQJJ0O6fLlSo0u4LizYt%2BF7jLhhEZKuPUREGmeNKciSOg3fFgw3Cu06AOmtmDg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:46:53.801642",
+            "updated_at": "2025-10-11 02:18:42.001246"
+        },
+        {
+            "id": 16,
+            "school": 1,
+            "username": "vahobjonovadilnura",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=0vBp3biMcWB5beSu2NxjW0KNQEHO18NitlgX6oQGEa0pnbZiXzmS6lKI2LcO7lBD6RjP29NQmXTY4rtfQRTw66qqxR%2FUm0Fd8d5mDnlThTkVlCrHaBsj49oGMLFhU1Zbh83tq%2FarN7AdLvuzuXOHULzGvhUWqWGfr7wan38Gx78SnEwAOCagcs4mzZeeqGriw0%2FpiYnxEKPiuQrI3OfOPb6KC96WVglgnyJtHlrArRbHV%2FkrfuZ1so%2BweLcl4EFJ6Hj0aARlCs4zOazdhLrKre6x5XVVGo5BIHN3%2B3kNYeWGnOaqoK8nT3zkF5vQ0VhCBIiZTQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:43:40.031919",
+            "updated_at": "2025-10-11 02:18:42.009105"
+        },
+        {
+            "id": 12,
+            "school": 1,
+            "username": "muhammadsolih.odiljo",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=aGJetzVq7WlaHvPjaD8je2Cl5lPPq8jzPLmVXLzxoyuZLQ8sO%2FSoSeOXfoSl2cbIDgEiFwSVs1wie5xJ6Fd25Dlc8hRN9OxfXDZrsUrSBC0WCd9DpVCOzv72l9nsi9FVJiBm%2FANjfU%2FFS3CQH3j5jDogkY%2FmCt9mLwe%2BGLdxhnQSbLIKZE5bOWkdshaVDOzt24LTFDYfF70qLKSZyIUg1snpTnRSCmnp7RuXMdP8%2BC4TzQhAfSGTsarq5h63fOSH2UyERRW9YJDt5mVh5jyNvSnZ5KFjkx6M5u2PPb1nl3l3ERgMyzp1MmZ4%2Fk1ZQYX%2BIPgQIQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:42:28.975031",
+            "updated_at": "2025-10-11 02:18:42.015257"
+        },
+        {
+            "id": 13,
+            "school": 1,
+            "username": "rahmonjonovah",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=toPwkg2eTyf3KV9KirSM9Ml3bBKePYsvl4%2BLqtG1twxDCO5%2FN4NDVIuMpqQw%2Fg3bWr2B9EbpeGUpS0jWnQookb%2BbHSR%2B5aQPKaHNgO%2BynN7A4aQHlERwQ8Yfj3udl0gwPvTs8xwZXXhcmwvoMDYlJRpjLBljJaiRYisMGt%2B57NqRhFrmSRE5L49imex%2B3nJHAAR%2FxBFUuFFCMd4vyHe6xaxHs1JLVna5w6q2ggx6pZ4jyIDhHsrJSHz5l9m70tsSAr6m33UDGoDySSG7BULVLQfE2aCo3Zvt%2B7B%2FKL56pEl6FzlRp9rFmo6ppOGXZ%2ByDOUeUTw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:42:49.128110",
+            "updated_at": "2025-10-11 02:18:42.021073"
+        },
+        {
+            "id": 17,
+            "school": 1,
+            "username": "isaqjonxolmatjonov",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=lqlW0aec8CuHa7hJJWygR%2FBcb9%2BRi8sPjcIJRPzU7GeE6MYQAuLO82rW8HQwBdKs%2B3M5n0BaKrm%2FzJ33P2k91sxpCRIfC0%2ByLEMztTEsXuqUfYchN8uPQqctRx2os5cB%2FztN9X6wDU%2BRYNruF7qPipXczewDYBgthH8DXKOOW%2Fxp90%2BrAb1QRZm70oQ5hPt6v4hbN%2FU4qQVKZLRk22busIQdPRkWXTkHsAPgY4hcmgMoSe6%2BwFKHA9EJz7iE1A3g1x9MblhqQ2cSGR4CgNtDVFtUh1AZAWxXCC3gIJVIoUsaC5q9KJJVpSeLNY1bn6kHMP0Kew%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:44:26.423669",
+            "updated_at": "2025-10-11 02:18:42.026985"
+        },
+        {
+            "id": 11,
+            "school": 1,
+            "username": "mirzahokimovas",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=UCY%2Bcj2TNAX0nLA%2BzE5hlDL15EyMGlzOs4vJfa70vWAO8SxxaqRhI7%2B7RdJy8C%2FqeZrRVG2v%2FPh9L3jslg6HCajG0iJgcAZPzkL6yFZCUZ01p%2BNjIY7T559sdsTyR3HFP7BESK1%2F7dulbZ1vE%2FCf201HlLjoTIH14N2dWznOSiEwHlj1qE6RrY6I30gyB7P9MkCvYR9G6lRl1CBpKbwlAiuSPeX9t60Gnasim3IuzpMuvzkTMsKnG9gHclV8skKdZ2HbcwERv39w2fA69AeLddkj3TTrzyM6ay1dKAcEHYicGuaW6HIIZZwia2%2ByDgkX0zOpNA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:42:18.568609",
+            "updated_at": "2025-10-11 02:18:41.982227"
+        },
+        {
+            "id": 14,
+            "school": 1,
+            "username": "toirjonovamuhammadal",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=bU%2B6LMXuUE903htUbhrxmuoqb8hqHQWWOlDz%2BS0o174dqJs9pZNrmMmxuihWjofsGWahVs3CvzksgslNxro1XLnClsDqV4WtIdmye541%2FUqtC0FfsvLnYQdd%2Fw8SdmfMHT%2B%2FzvdZWZhH3hv01gIY9nw4P6EzmK5QvQeJNXzBHZSTlHswMrAeamwYqWLVmm1xLE2S2gvh2LxkghsjadNVx8%2B2LnwgzoK1ZYbViVUVJ7HhA%2F8wZOtCpKnwoxRtcTq0nS2eFjIUZ%2BHwRkvXYrioNFp5XoksjzO6iXbrcLO0ita%2BWJ4JSKS9YxrquJFJsciPhq9evw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:43:19.982667",
+            "updated_at": "2025-10-11 02:18:41.994786"
+        },
+        {
+            "id": 1,
+            "school": 1,
+            "username": "xusanboyabdulxayev",
+            "password": "12345678x",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=eHC79lgt7msWjNXFOpE8AfB8IbsP%2FiV%2BSoWNshHoUogP9itTGD18bQMU9MVKlReCaEVrKc70qipd%2BsT13A%2FitWmkCSpkmH%2BHE3mEZcdSaqxtz7W8rLVf4B029E5OCE%2BUTQPVK7%2BO4ybVyMZwN1No5VfG%2FxyZk4oXcWa8RrK1pl5zGdmorPF2ns8m46%2Bq9nxZm4qg4mq%2FlIxwUoJ8o7SdcTy2G5dsjJtF0N6aTgzsaq2UvUdjH2uxafJnnLMc8xg1oGOGtFhsez7C3Gwxu6hbKjw7LeNxVEqMlIEDjV%2FHV8RGugiryYLQVRrKjtcLV9hVTLGsSQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 03:42:33.843284",
+            "updated_at": "2025-10-11 02:18:42.048641"
+        },
+        {
+            "id": 20,
+            "school": 1,
+            "username": "mkolimjonova",
+            "password": "12345v",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=0.0; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=O7WCo5SofeKn%2Fkzt%2F7p6yAtMHXwpGgvh715SI3%2FfMBhCkxfU6tnS7SXjiMHb1ysLUisAb8aB2NbMNxMqq%2B7r%2B9bNxUZRiiG1knJpiFqRTDhMseD8D9qyIX6jirtrdw4rnVVYRJjd1RJaIVNqie8ZeUXwCnYNjt%2FhQt1NgRUT6ZAZBBTZdKomniaQuxOF93K0ulz4dXge90R%2Fws3h8Njxzk7mA1011LIWZ0qcGjIL%2BZAsKZhAcjrp5c7xdloDWiCmEwHJLh7NwkUsvnYqPhxZ%2FpoBeiu2edObSZkIgQh7zHQFqB5%2FLmEOElKCfX8wB2jPS50jUg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:13:24.132500",
+            "updated_at": "2025-10-11 02:18:42.053596"
+        },
+        {
+            "id": 10,
+            "school": 1,
+            "username": "durdonamamatursinova",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=92c43c50-16d4-4fce-811a-e532f1d44fe3%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=17eUZpvi1%2BLsRsVfqWukqySZSQeh7MjYKzV0Aymm1t8OVborgt0I5Ln3wKCxNjytcCAK7DRledy249wuAoR36Yl9n6YtgtXJUNCs%2FrNDq3EUuFqjxJE5VfaZ7t1q6Rytz4OLNMdu4QrwgsGzhuFiVbK6kLdd%2Fpz%2F6mtlG6HF%2BMD%2FXuZmv9aDNfPr6L1RqAuVvEeHx1QeigfctJ5ZLKmJ%2FIqf%2BgvByiw5sqo5%2FixQN6Rs6nuGgESuFvrJogupzo6gjSpOGOaXj4mMIakkQkUG7D9%2FauvSdb3fVmL4uxtDMxuRt%2BWeO2zSqyc6BfIB88i7rT6WSg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:42:10.334500",
+            "updated_at": "2025-10-11 02:18:42.058544"
+        },
+        {
+            "id": 19,
+            "school": 1,
+            "username": "dovudshahobidinov",
+            "password": "12345v",
+            "last_cookie": "UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; a_r_p_i=13.1; dnevnik_rr=False; sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=VUkd48gbW4z8pM9wwsDL%2BmyBpzvhSdafuLfKKT772MXDvhBrNCO7HmI4YzGePue%2FWuj0w7Xn9npKKjGRmGWoXTWqHQ270d5r6GfHB4c1ErWGamZuudqNI3%2BmDdjwQXPXf7QxuG15ySRzhYa%2FTgUhX%2FnBhZD82Ffdp1%2BR0ha%2BE1wMckBcply2GmHWp0xL6f1h0VyoMZQmqx5uhyV3%2F0Ua9De6KuO79NPePQ76LbDBmZYzy6vwRHYZt8WZkOo%2B%2Fb8YbZ0fYUxJ7fG0h2v%2FGyHwmCPApkn61eEVpAUiVCtIkiv8MTtmFSYzFbY4gWPMdmDJVyQ2dQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-02 15:47:20.540857",
+            "updated_at": "2025-10-11 02:18:42.063467"
+        },
+        {
+            "id": 21,
+            "school": 1,
+            "username": "muhammadazizt0112201",
+            "password": "12345v",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.1; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=Vs8oGaNAF25lzeBM7QR3VcJYX4sPM%2BM%2BmPFGax2djPOlxqGj2AHuzVfQEYKbCDKxNUB%2FaO2S1jcN8T8pX%2B2sT%2But%2Fl4dlF%2Bx%2B90zP7KWOlKegDouKGiruFBYhvcEfdq%2BFfkG9CKi1VVqsYx0YfipigHz8loR1j1r8eYCvDv%2Bthcfv1RXw1Cqqinv3nOJ3RE5sPP%2FS4m%2Fi2JdPoF5KrMV0VIIU7lRyjQ5LLZoosJKMnbF%2FOYAR56McMIOZg5uyJprc0d0gL5MOlOC1ubgH%2FmvgWp0fq83HJfAzLYqs%2BqmucrwpAQaxCkYztxLG10FwE8tBNw2Rw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:13:39.508066",
+            "updated_at": "2025-10-11 02:18:42.032534"
+        },
+        {
+            "id": 22,
+            "school": 1,
+            "username": "sanjarbekumrzakov",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.1; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=6dNpCn1C3BalluMBkgxcMZHY8%2FlTvY%2BmId9DvQOPyJnupRvn54o4Pj0iFFMCpnN2lFOkVAs5TQXgFiO6TyTeJrij%2B2ZWKde2KaHgieIgF39QdiiYvfvwXBCKvrUWT9P12UVtCIRqcH%2ByhTBnjmS7fxGjQWY8O208oF5xMjllT7JIIA0RGfJ1AnaoJ1ikM5kFzyk6%2FWyjnY5KcyIyezKu86ioC53v%2F1ImT4rg2UrnDsSEF9%2B5Nw62IjBd2W96vjJ2OvYqMxKj6yDUmRS0%2FALpd9uDRO5D%2FYNMV5r0xR%2FNGW73B5GCQvFouUjAAX0oDvRUcP8Wvw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:15:33.247323",
+            "updated_at": "2025-10-11 02:18:42.037878"
+        },
+        {
+            "id": 23,
+            "school": 1,
+            "username": "a_mavlon",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=e5%2BfkzNadfhbQUv8U20b0EM9jE0SXPn%2Bkyd2QkWRjKB%2BqVBqhy%2FLRMYsPVvZx7XiEkObnzbQWxQQN65eQMjGedj82BnzSlTEcAyO%2B1ABYlMCh9stFNJv7v%2BCtRqRlHVpGWE6rw%2BdEkONxHcspGdyRWAg3%2FOvscXWj1LpptqHR21MvbtJB5EOh1auSgqyRz81qcFogD76spIYqRPVdHSVCKzd7b8OTbtrPAiTy0J9dzqBkNkNcyWRlpwD8thaXEYAaAAxbt0RjuUKXPgv43DzozjbBRoldU3IyXLzuLPpIPlNLkS4CSTqG8qq0uY5DIM7Fjcsfw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:18:00.013379",
+            "updated_at": "2025-10-11 02:18:42.043312"
+        },
+        {
+            "id": 32,
+            "school": 1,
+            "username": "olimjonova.gulchexra",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=kUTh%2FFKczEfysVayDETAfk8sq0rqfFBScQiQByQLRS4Icpg9giNRfbDh3vTiIgv5ccdMXvOKIoD3TiOwT3xiRW0bP3W67%2FPI%2FsoQTaCl5Y25sQNg5cf4PBY5ZEgZxLBUwflGtQTSZQm12xT1aiZQoXcPrQMY9weV2saQ6tkdGVuXCI%2BId2smTUPHSNWfKaXyzo%2BNN37pdRftMOk5rqVvCJpBU0QLmiSXY1E4tnOx4CItScgzWaztyMlJ48v88SMEb14lEwNPbuB%2F8j3fkYAQ5eVixaicQGfTfFhfqX1kbUHovnlrPsJApvdumzPkrOaZo8rmgA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:19:19.793491",
+            "updated_at": "2025-10-11 02:18:42.077794"
+        },
+        {
+            "id": 24,
+            "school": 1,
+            "username": "abdullayeva.maloxatx",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=0.0; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=FMtDhw2WLZnbmK7a%2B%2Fd8T%2BF1pFEBIFPaWQ4Pecsrs8GTJNy9mxk6RMWWgnSp%2F%2B52ZjaDHAx4wAYTT3nYnLv%2F88Aaa3DIWX5LAvZCghDuglqlAKpBrjt4XIKnfPgY5%2BMqRSxFN1XWQPtWha%2BEFwIFDxwrGTHk%2Bn1FtU1NfQ12Fby%2Bjml7OBpIEpVB6O5n6Hr37Oeuubw5%2FModlUXO4PDzF1MqqdP1vk4pWez8UFyGMY2qwtWLYP5yOoOOLWNI8cduCgZ%2BYaaihh4zYMh5WcY8%2FFd5IEyZGbvElMybUeITWN29sM3uQxYif6mlFsj%2BvNPTjoMqlg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:18:16.554960",
+            "updated_at": "2025-10-11 02:18:42.083062"
+        },
+        {
+            "id": 26,
+            "school": 1,
+            "username": "akramjonashurova",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=rcif%2Buek6A5e3MOaAlIeE%2B502pMWqFiytNd1TtWHEss8qL1gmB1bensG3LGm0hggzmLADMCuatA94OCahhgylejIcsntmbpiWcXBFykXMqtbl0Zh5gtI3c4pwfxHZI4KE0NM6tdKwz2btVOkOBigCJCfBJ3CM8C3ZiRiFm%2BqJ%2BspqbxGlWw44YxeCRBO%2BV8uW1FXgbi7i4cVM4gs7El5vT2tuJnq3PYy4dBuQ2Idc3HdoJhUchhUA1i2ysaAuYQWTkaDNnLaWHS663Gxp3FRS1%2F%2F6dPFwcmOCwIB3%2BXR3E22azbCkwmk7JXcKdF%2FdHwzADXuzA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:18:30.070597",
+            "updated_at": "2025-10-11 02:18:42.088101"
+        },
+        {
+            "id": 27,
+            "school": 1,
+            "username": "mamasoli.boltaboyev",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=0.0; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=UmkgAZKgcteXEl2wAbqVwEuoBTpaBUr0Kz6c%2BvcS5WCdOfBj4P8CURBBks0GB9GPbcwVW%2FJzd7%2FPfUDZRk0jL4e%2BUiZ2qzCXVodbEmIZ%2BeB8L2Og%2F7FwH%2FXRLpISTwxQL5B5qTU8hCv6d6nLUuilnepSndTBiK%2F93IwnFXlbw9Zq44IvFWx8Dko2MNjpIu6UnnmQIZQrk9%2BoRBfq3cWig6G3glRe4RZcvv7ossv8Bm0bk7uUlFZv8cQM6UyMuUJatgm9trDnylOZ01B2uO39WhwgLU5rfQ7oy58VWwKeqH%2BHBrRmDh0fuoWYXezcuu9i3K4j0Q%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:18:35.137168",
+            "updated_at": "2025-10-11 02:18:42.093051"
+        },
+        {
+            "id": 29,
+            "school": 1,
+            "username": "mamayusupovaziyodaxo",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=8y8g9EvoF%2BOPcFo0JwESUXFSmJyQWKrQqe8FvWdfvwRhZqg0iUJXeLO3d7loAqZiksdelDkioGYXISXLn9NF1UG3VbSDPcvbp7DfW3XWUGLCmJgTdQ50Qvc9yZV9LDw1DtETMy0Fxa8WodOqYEMlgJUksL1KHEJzOg4mmLXZmp%2BoypcH2oYjvZN67nA8J7tafYri3Lzy4Ol5ZdtghiSiiU%2BT3uLVMVh3zd302dZuXz9tLah79GOHtypbkK0VD9mmb2IZ9zF6u41x%2BOH67r5bACmmru9%2FQn4NGEePdtfif0UraROQgaIaFtYpg94S7KFvac3IVg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:18:52.859706",
+            "updated_at": "2025-10-11 02:18:42.099259"
+        },
+        {
+            "id": 28,
+            "school": 1,
+            "username": "shaxzodaxonkamolova",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=qoWOv%2Fc0KzPgLeLWQQcGuZyfEIDJ6BZ1bjlnNebu2othkYazqs6ksB0V2iLUJqH9L4Be4iirczr%2BSwmnFEi1FbzYC8Vb0q8k64RIqtXZEAR6VEQjmNQOdT87uQdC3psGpxvmAm%2FVAqqPoi4VBqO8MH%2BcDaMlbJnkiVt6zF2f8TlNXz5kE6dGfPN5cMVp8s3cA70dhJd7AgtTonZRkvsrBdlwtJktNArBK%2BeZkxyNt7kSZv7LGbr3kudjq0xd6Ix1HdP4y6%2FiST5awc%2B9aq8MLefBYLWJJk%2B2hQl5gyGAKYbbNPV3rZqwAP4BeqTvlLv2dH4Mkw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:18:41.383953",
+            "updated_at": "2025-10-11 02:18:42.104596"
+        },
+        {
+            "id": 30,
+            "school": 1,
+            "username": "zilolaxonmasharipova",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=%2FZvTQjIx%2BZ0xdvHIygWNALnBLVOK5A8JAWvGuzy713oCVGfLq1Heyl3sdrbetM17uYcX%2Bp%2Feg4v7sSk38wBiYc%2B4bSiaSUfMXjRckF7UJfOR%2B2N0f4D%2FltY0H2b2Z96szTictJIlAtwI%2F%2FLFWzVdTihpJ5e2uk1xFBB3w6m4BLdrz5aKecxKtnP9GwJ%2BZIMeDGb6vPrHtoewSjkoY%2Fqp0iijYtMdOAwTr9jySFupeYucJkhO8fYdLiOVFpQPg%2F4S2Zi9wwbtz%2BoHMNLxoxHxs6dYFBte9pP2e1qnFULWb%2Fjakw3LXrYhUX9ZU10AE1cetxczGA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:19:03.801713",
+            "updated_at": "2025-10-11 02:18:42.068561"
+        },
+        {
+            "id": 31,
+            "school": 1,
+            "username": "mirzaolimovjaxongir",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=%2BkhdZWEDwbq4ZUskliJyqF9eJwOeeEJDrBiv2eYN5wDbRhjH1PIleL2XukcHQxb%2BmBCDgOQA2dqzmjasRzNBfaF3ZLHNNaJJ5ZGI5pl8%2BiAaxmQvhBYalagriKBJEl%2FK32fYY5MdUJhgIySVNUQ8jJYG3MHd8NRJdhj%2B2izL20oR5W2zbWC6ocBNKFQhi6KcmIvX54olV%2B0HPW0EYdhAZ465ZvHOpq9%2F5SS4Nd8V5LJ6hDtrxy2ayUokim1RqECZpCV9r8WPf15kGWNW%2Bfp10tGlV8U8NQmo%2BhcMolhBd4LdbO795n6UAbEeIMvHvchMG6PL7Q%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:19:10.205410",
+            "updated_at": "2025-10-11 02:18:42.073429"
+        },
+        {
+            "id": 33,
+            "school": 1,
+            "username": "minovarxonotaqulova",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=0.0; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=%2BmdvfYuZu6MsWbCXI9b3dhQh5xhDz6DeGsw%2BeEIM3bACgPbd6tjXeCy9lXryVfXba56W2PeXdp1cdTNK6gic5moviheAYxtDFNzz%2FSJB0r14YTlEOioNzt23qQ58MXsI2jRFRIWGRrngo5AgN4FUbnyt%2Be98C3EaLdxlth6IzZkh9XipR49dfc0cYev1JpOHo289oANNTDGbcLRnOdXfWFnRBWS13Ai%2FTuk6oDTVxWceF31BCnYrXNBrAvMaN86v4xYFLuVCyob7anr8xyYIkmbbkHT1mtmvLX7P3rX4h%2FHjaUo8HusyFW16iaFk5u340NLGcg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:19:24.837752",
+            "updated_at": "2025-10-11 02:18:42.116231"
+        },
+        {
+            "id": 35,
+            "school": 1,
+            "username": "mohinisosodiqova",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=njkOX87XT7EhFSa9tsRYoXPE9CHzWVlMX%2BTGDf4r9hqUppGY%2B2%2FTzTfQN%2FFXg1uzyf46dAXLFUH2ZQeSShw0dMIYSLVg1H561%2B7z1s6JDzl4PSUMOVJa3KOP1O2zaXIqS1b2Xv1Vx0aNofBsLCiazxknlZjVLsPzxp2NHXbszQadYmwn7QvfqxqUSBJtKru9HGTbZEeFVumBfkWDuH5PmYXyuCAryiBv%2BFSpWNB2Z20C8rrSEUv%2B0sy4QFOZxJ9ZGqUDEcD0h3KNqeZTMiQkDgaDs%2BDZdLvpKecUsL3vZkvphCzfJccJ0yzdlgnvl8%2FOgRl%2BJw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:19:35.054110",
+            "updated_at": "2025-10-11 02:18:42.121987"
+        },
+        {
+            "id": 36,
+            "school": 1,
+            "username": "sotvoldiyev.kamolidd",
+            "password": "12345678",
+            "last_cookie": "sst=92c43c50-16d4-4fce-811a-e532f1d44fe3%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=bksMOp0ojihpTXJbjsQwxGj%2FYJ7p9sLqTOVtOhOKzAgXnqMqi6o1YcvSpx%2BCLwnse7DHXmTtOWCAG0TmT4c18FzOeAsCzeRbgi4XObHWahHzLkHdHRuPmajlhcu0qwpDsfSByJ%2Fzr%2BfcVkuCPwATETwqqO9q6kMuogMx4SSQI7DPK25gYYSDoThRRwNCvZBebievpr11bbhXj667hbiEPvbXq2vyx%2FMwFCLTod0B5Qd4M2fIRXPCzAQrKihklnCmAeMw4efuuqiPeK3ZKDDaUSywgqhaW94j1Mmd0Y7OFKZadcR%2Fbqt5HwMvmPbNxcoxl%2BJk9g%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:19:39.618514",
+            "updated_at": "2025-10-11 02:18:42.127111"
+        },
+        {
+            "id": 25,
+            "school": 1,
+            "username": "abdullayevamamura038",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=bY9%2FJivCJsh2N0Jf62UdgDlIWALWPZO3yAeSr0yBLU7TCrdblqt2u2MCZGjmtfbp8V%2B%2F7HnjfAHqavc51VTgiCiW6XugHEJhHM8RC%2BK5TOgbRI34Bzym2d4CWQvtaSEMYzQfNllJLslSNhbYZJiWgGNr%2FtLqd36sf5UNh%2FadnkQ9rKcFQCfGyxXPGZYUyPA15t1QIS%2BgHve9R6UJjaQ65B3gntZ5I860C6kcgO%2FSNVB2cHip76vkA1GRfSd%2BeEkbsOtmeiutXRRIL%2Burr2X49KHfYl%2FexqI1BN3BFCtqZbfySdPhjvJlaQ4L0q6Z0NzbRSELOA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:18:24.486290",
+            "updated_at": "2025-10-11 02:18:42.134394"
+        },
+        {
+            "id": 34,
+            "school": 1,
+            "username": "r_gulsora",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=8p%2BNrG6T5ur4CQhLf%2BsKjsGaq%2BUc0w5wukWBivt7sbEUfgUUC62ieB08dXJUFItNtOfbvMFH7uAFQ7%2BQRKnWC%2B2AhmT6XCxFnxrD7lH4ubZcML1S79%2BD7itAfuBqZbalEtXJ%2BNS4ErZroGjI9lnVioIbFhDrG6SFejkKZRsQ8ahnlof%2B6LQmWCwNMvWGqI6jWYDN7tdYCN4JzRLXqhXmBTNnh7diX%2FHu7WMdSKMmqshFO24DxEN1FHyei0Wi4jf6tT%2FnoxRR7NtKG%2Fi1dwPAlPvqWbtNVSCTd2vBlrCQcyH%2BB0gnjH%2FNKVz3rsgmL%2BtmuyJoWA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:19:30.377642",
+            "updated_at": "2025-10-11 02:18:42.110716"
+        },
+        {
+            "id": 44,
+            "school": 1,
+            "username": "umidaxonbuvayev",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=KrWyDOzCb2J7OUWAest767aVXyTgmCXrlYFZ0EhIOYhF216sDxWvc86J7be1P9EaZ2GsFhkCMgTQGQc6ed8tyfjhL6EVWEhvMglfD%2FFRMD6E7OMUukwWlQg%2Bpj%2BSgdOt%2Fv2limgImEaiEejFvEMhX7Cx02sJ4u2hxyiIgUdPG9ayDggRv6%2B%2FtukfL0N0dmu2YbswS2AWJnCUaaof8ZSVFKUKsB4L%2FmVotpVhGYiiQqs%2Fr%2BJDDDbWgxaRPjDtkz6lrw6aH7m6CxkJTM6N%2BSMSqmp9uzF%2F4C0YrK3HeFI63AgSS9bYAB5EynY5nQCbfZW2MvhGUQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 05:54:17.408216",
+            "updated_at": "2025-10-11 02:18:42.148415"
+        },
+        {
+            "id": 38,
+            "school": 1,
+            "username": "tojimurodxayitov",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=23.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=iDjJ2N6b9u1r0pG438Lls0z9Z1O%2BWTOed3uvgjlkfIMWcPZ2UcCLKrlSxArSDF6oV8kH9koTNvJ6AzhBWqWToB6BUnoEADmQZjegO1iMFDQM4JAIsoYuiWaB8lPLiuyA0W2x9wFUKYSttwXwqCLi9NuD0XLJk5nWhccHMsTfHhSYQZVjIdhW3YIrO01lNuTuo6WDa6xjMxZGMvOkbO7EvHUvXVJZuedt0OZfmlFD%2B7WGJzmCNPNMjKam869IPUTiF7%2FA3VF2GN0jVBzTxOQigcVD4V45zUaIyC7MomEIhF1iO9wBMi3940jjDC2d1c1qiIm2FA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:20:53.570434",
+            "updated_at": "2025-10-11 02:18:42.155103"
+        },
+        {
+            "id": 39,
+            "school": 1,
+            "username": "alisher.xojayev02198",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=vewOlEn4Iv20NERvuS3t2Kdc7o7CFp0fxuJdCOR%2BCn%2FgoD3U1es9Wv8gLh6oQvbbeDV3gB0Qv0zyDNeM7tFoxQVPw1mE8cAPzTYTPgQw0LMrJHnFN9JlqwmVUWDKCbyXMgARg51soYO1XaWaMLYAFrkquqBLi%2FliJswIEafVlDJv9E8k7uOZhj78GI1aXdmUVWfo5McE9OMnBPy%2BUTQJzEPawx7Woe2VdSAF2B%2FTn2tRkcB2KtFWVuLVXxANDfD%2BQ8b1q%2FzQuDU%2Far91bBikgFJg7UgBiQMcV%2Bx%2FXK5wyKTjQZJbQncl1U5lpOoLDDOMxEEgRw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:20:58.722691",
+            "updated_at": "2025-10-11 02:18:42.161428"
+        },
+        {
+            "id": 46,
+            "school": 1,
+            "username": "umidamasobirova",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=9i2pCm8fuJthQiHqXsEDI%2BO5SYy8RU9wm0LHJqankmWxUDUbnYL1SBYPZ3Q96jdOn%2FE71qSdP9ptmLg3Ps20FX4sg%2BhCuqewu5sW2cWZz9qI7HtL66%2Bjlj8YyCmLSO3gYXBa5O92JhUE0iht6inbTkrpc8NgTclczYg2QthB%2BqqtqXIiA6uVbIjd6WX64t2IdFRR5aS2e4B4OCSRNgnNV1%2B3SjbrJ37MWzqh7mAb%2F%2BWHMcgHEu4VG80eFocLcIibgyjYl6T839Az93LXKQfvKihZ%2FO9S1KjRPCqkXPOrOiacpBmkQA2iq6kIAO1NKCZsN7qUpg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:27:05.106563",
+            "updated_at": "2025-10-11 02:18:42.165816"
+        },
+        {
+            "id": 45,
+            "school": 1,
+            "username": "oyjamolxoniminova",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=NEbrZV8QJkSRWDfpiWqE9fl1zRsl5YgpQYkUIzXnGMzsw8Vv5y1kK%2ByWK06fF2yg9pLRCP9ZJWcskFJgQr963R%2FUeQBXRSI23F0QW7IkuamhwiI8xlJzqr7kzjZtqA4EkiTxiZRbo5e4G66XxA%2BnTJUEtsR16sRUPHgB3K4z9nut25oAdXriDMy5Z26WompCbpJhzceYFrcpxQpnvTm2q5wKnYrRPLStL0tC3bEIy7q%2B1mquvUujijUfjrVW4sJKaM2zG1xrYA%2FkLKqH6jZAYc1gjaA%2BeIqM09FvjlB2ZtDYgwo8bWzC4%2BSEA6RNT1F1EbEfWg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 05:55:28.004109",
+            "updated_at": "2025-10-11 02:18:42.170363"
+        },
+        {
+            "id": 42,
+            "school": 1,
+            "username": "muxidinzaynobidinov",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=YCBylCiTWPLx1Azq9VCjxun0S1ePHdI1TFtcQkFzG718JRn2LlvHfTbUN1S2optsgsqLcKU9%2Fd3zAyLU9Ir6OA%2FRzFjNKT1saZfjEKqvJ6iIf1HNroTca72bVD%2BjdJxHdsb%2BjhAiGM7C13IccRGP8rNMOwrobVBbmH3s7fr5gUAju8HVksa%2F8rw2m386qNLlmE7ODcs1CX6vQTC48L%2FeL9DcLixvsuuCZcRVAUYdBe6I9sZWQ4tWD46H%2BYp4T%2FXhSNgnMb6uXR2%2B%2B%2BwWr5%2BvR736sw1EYqMo5vTUkttiXq3ch%2Fx125oDOGSbKRzVDwNyJLS46w%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:21:15.187917",
+            "updated_at": "2025-10-11 02:18:42.174520"
+        },
+        {
+            "id": 40,
+            "school": 1,
+            "username": "tolqinjon.yuldashev1",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=gWG9FCjKyiNuESmxU%2FewMjhpYqVISgIwcTv14lkLbWpAVoRVRm4IUf2GIMBXo4CtfuNkdJxW1kZSNPLBB1uZZHzL3WTYsbVPdmtjEdJ3W23Z9NYDDPByhqgpl%2FB7A58nJYbi3LiWMh7bKbdxZUiiK7akOBrpWjh91LfM5kBC6ExUW7abtSPsePoJIgWoAcR6BD9xczvLVYr%2FajbysJ8%2Fpti5663j5IShVJIOcnZUewTCSHtJnYGIUivM5lYINnzSZo1fCJlnPo6AwuZKfM3uHJOJvgQ9Igf2wa5zJsDMxqbI1aGKhVZ%2BBNAydkP90aoiFK07Pg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:21:03.594045",
+            "updated_at": "2025-10-11 02:18:42.178913"
+        },
+        {
+            "id": 43,
+            "school": 1,
+            "username": "mamajonovabdurasul20",
+            "password": "12345678x",
+            "last_cookie": "sst=b383c965-3d15-47aa-b0fd-01f8653744fb%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=%2BbBn6GznuW1xnJKarEVUJeOGhyn4VlaYcAEdpxZaE5DcxFspwhBSTFxKe5oorcioPCAi77Ce1pkTLoG7M%2B0NH2wiXhwOYeeMWXiTJD7ErbV7cq3fLkBCV2ICPA97q6X13pbfhbcI5ETOkU8HpLpA51Q3JrgiLprQhLV5wE1Q7J2JiD%2B5Asc4GGZ75pn8R4ilgNnqzQLtyWn6ddzBXQ01LL%2BsmmI7%2BcpQYvD9tnqdR2iIQ2%2B%2BYM91U6bvbBg5wvBmpytTSQjxc3%2BF2M2TymaYj2ETKzPHnUCz5Xf%2BzrTeg20%2B1IVVQ6NUTWKSuSwwXh0FpOteXQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-04 07:12:26.712797",
+            "updated_at": "2025-10-11 02:18:42.183181"
+        },
+        {
+            "id": 37,
+            "school": 1,
+            "username": "s.xanifaxon",
+            "password": "12345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=0.0; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=ZMxRCLBBn53N6TvO2pvzZTZ9rvaP9GBGqVkHb2MM%2BNWsdMBBX%2BT7ww30PXaO8Yc9Fp6ADIS85qbIU94Bt2%2BZtslwCe7GHKCoo0%2B8qL30elidKzH1mCRcmUN1AfCAx3zZbMeY0Vg5alqYqsVlK5nbzfvMerXVLbP52dlNQ%2FiMszEm%2Bm8tgCUePmwur0%2BMqSSl4Iemi8Wx21GIIWl0TbVQGhNfCivcvgEADfsXUPX15ArNh6UUsbxupPKJxyfdVj8x9d5hfZciv4BoThETZyjL0h9QiEWTU67cYXy%2F1rKIgmoBewO%2B%2FelAwrpF%2BBY29edB%2BqTfoA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:20:41.907110",
+            "updated_at": "2025-10-11 02:18:42.141615"
+        },
+        {
+            "id": 54,
+            "school": 1,
+            "username": "toshbolyayeva",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=d0BULVhCHJDotpjhZ7lT59o8gM7dKXvGN03Y0OwzMAxQdmcjocJ5yix0igjoEDRpPOZqV6hKEiPwkYuKjIXL91MYFxP%2FOEBGakHCicGdXo%2BNr1WuhCYbW8Aw47W8erIRmuWAnzlcPIwpfhI0gHiyu%2FEmL1gEeEz1DEEYW5KlAadhdp%2FX%2FTr7TUh94NHPLI0RIpGobBkP1MU2o1nmp3bF4rJuQ84dmUcw2HaJxbPyOE5rKXet3mCsx02BqEe%2FDOO%2Bszb0cB7m6Ws%2BDxjHIKPikm8IgehZfbcalD0wffmGfRzYAD%2F%2F2R8McjvlaBkOob7e93RV5g%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:35:29.644692",
+            "updated_at": "2025-10-11 02:18:42.197105"
+        },
+        {
+            "id": 55,
+            "school": 1,
+            "username": "xalimovaxilolaxon",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=bsLbDoVM9Rs546fdCIJBMPEsDv4s1YRGFqE8VlN7ONU7Z1T4DyB12a1GWD%2BRKvt%2BEGjpWRYt%2FG2pExm7YfVJ%2Bzallw51x7jy441UOwUT4FeqCqFxuSzNoG5pMxtkhk7R42nwl6qs0A758Tufa3UlUb4mZ0IaETfmFEy%2FkXHfr%2Bm01uwaIGTV3HEsvlsM7toCuWTir%2BggbRAcoAHmMKk8TtmNzrHeU4UZRElz%2F1RLu7OF9jWsnGzZnRxWVYwp0cE7HieiqZNaM1e7aqzE1Nk1dVbosmpLu1W%2BAk%2BZTn82SX4MGBOmJzcMFY%2B0x7Fbv1RKGIYGtg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:36:53.882547",
+            "updated_at": "2025-10-11 02:18:42.201705"
+        },
+        {
+            "id": 48,
+            "school": 1,
+            "username": "maxsutjonovam",
+            "password": "12345a",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=ScDponWkEOahwBkiqpNxOZu5ShERYBMgDM3p%2BhdnUgN%2Bnv7G0RpPCXtOl7AZ4Kh59uZSxFZO6HlqmXaFYteRSiM399LAFHLGjyQM0O46vYHT7nmLPu1LnDci8wyTsEVKt2CGQLhZXWTYitL4Yr%2FzQhQ2TbWUB87kyqQ%2FzLndH%2BizHO%2FJWt9qVJTimlFQqlOyDJfUBXZ%2F%2FK1HvXYCKEoOCj7Te2AJBaoi328Kywp72iDuAul%2FueztTpODAOhftdPeX%2BtxAYqhioLf6aHeURBrY5EHiUqPhssv%2FcfTrGDVwkhOClpWD6Jvba27q7wzZ2aIB0eNeA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:29:34.567644",
+            "updated_at": "2025-10-11 02:18:42.207760"
+        },
+        {
+            "id": 49,
+            "school": 1,
+            "username": "mirzayev.murodjon081",
+            "password": "12345a",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=8CzzXb7%2B2oj8Xpe5UkvP%2Fk7sGj5%2BOEIfVEL7le5oPkFiBuvhiasnoqMgFFRQu29tIjsuk7Ph6H2OmnjXx9i2olahIh5G%2FlfLObcNgM5s02J9JaP9nvJdR1KqcZAkRMGOjLeL2mIC0TneDqqsbP9Z7qfVk97VQOjPdEAUkrUSMKmGXqhoMG%2BpRqa81jubqK1oUKpUXjJIIxpaxdDFlaWtiNC4H1kw%2BYQo6csTGozxmTXI%2Bb43uWBU7Yd9Ib7R%2FydCSEs09Zt672zTfzzpgLCvyLijYZkuawR5qo4YsCB2efijSSYGMRLAJP3vZphfU0dpAVF4fw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:30:38.200910",
+            "updated_at": "2025-10-11 02:18:42.214457"
+        },
+        {
+            "id": 50,
+            "school": 1,
+            "username": "shaxnozamirzayeva060",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=wXrbvRalCjhWbthSRhaYPoinyL6sUvs3o0nQRRb%2FpEuIqC%2Bj5cQfSzxsOTaZY%2BAre0uy6XMKaVbF07emAykmkKYqdjMu78aExeGmGrAkyBVnSDv1WM9A6vUGPYyIkFucobLJ3%2FvHzCC8MEJFIoy5Rvu4QDw4%2B9%2F9465SXLvNrnSlrrPut9EgPljk7OJStTzPCSdQ4QtI9sD%2Fy1nC7EaieDqEWDjVgBGCF2xuupaWDIVXGLLM7TPqdhWeWVqtbk7kjDLQ5K8k4o7tivwQ1nZHnnnrEoGAF19jneQWLbZOQT5ex0ch00crDx3VTLEIgU6VV2c2BA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:30:43.364835",
+            "updated_at": "2025-10-11 02:18:42.219561"
+        },
+        {
+            "id": 51,
+            "school": 1,
+            "username": "otajonovamuqaddamxon",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=AOxY9A1Jya%2Fs%2BidL8aZ3dYFn7%2FP5dzS4Y3vpzdI8D5e7v%2BTZez%2Fgn3JZFqh4fk3uNGOYJ6WJh9rb9sjf%2FkeA7HvcA6qqPn76wLK6CXNB0SVPTrCwaW2Yo5W%2FE%2F65nXx2m0gfcwarCR3PFdBCkN40jQ61HG3nJpd1JnZprNuqW7i0pFyOJ%2BGyVhaYjdbqPrzypiD30r1HaKFL7Ux67I934QR%2BGdC51pEVoGyPA3873G9HS%2BDNDFjLQrToUSeNXDWW5WPeOXHHlfHd6l3Cm663Kcjx2ZSugWbdul77JMhmtXYV3lx8CXruvHtaqwK8Iow1wYXKjw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:31:17.070476",
+            "updated_at": "2025-10-11 02:18:42.224603"
+        },
+        {
+            "id": 52,
+            "school": 1,
+            "username": "shohidaxonsadikova",
+            "password": "123456",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=0.0; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=3ZfVGKgFRZ5iDvvKKvcEog8fc8ti%2FDelAuZzGlbSmE0ozuDq2dWUAom3kT%2B1sNB3nQgRnQrrs2ib2kwny9AWxItoO60KQ2d54SMqt4mG3qIb%2BxHKNpol%2BhlnS2YIpteUxFShHWg%2FpFs8eLqSc1jgQrWF8G7phnGzc0bHXv%2FTTOtMBjvrbalPdnh0s%2BlZwVjCoktKZ2UtOZP4L25zEF2IaBlmfOYLzK%2FpcrHamVt7OogHNSenO07jB7HAk9%2BoHwRo96v7hAJ%2Bbl65bFdmhgagr%2F6sxavB9lxgGb3Sf09TTdF5a%2FP%2FwVRJw%2FCR%2BBTVIsqTthh5uQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:31:28.249826",
+            "updated_at": "2025-10-11 02:18:42.187892"
+        },
+        {
+            "id": 53,
+            "school": 1,
+            "username": "komilaxon.tojiboyeva",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=OOoeoUvkMr0uhVyGuWOHRnRTNOktXGx0JS%2BHiK17jnyUMFJQ0LKChGv7DKsSQwe0s%2BipbmeYzZTmgJPGzu98hNZmjxwtVkfuCIQreaSTzTEE3UXtbsr8f8u1v4PviXavl%2BHrWxZGTeiVu082Wy4Mi71xC0R9lxXRitBUhWWBl3KMZvGTGRlUTTJ59lgDhe3hddRep66HK9CmAEsj1t2ntAfD5S9dZ3Shaq4hK96UBAxUsauxNOqrZutPV7iTZEDN1TLfN9FEXyQMX%2BYAgqW4ewBVoA3Adc6CxVPH8nIpTMIr3UfGIukFwvJyKj8nh%2F5sado2Lg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:32:06.724333",
+            "updated_at": "2025-10-11 02:18:42.192196"
+        },
+        {
+            "id": 62,
+            "school": 1,
+            "username": "marufov.samandar",
+            "password": "012345678",
+            "last_cookie": "sst=92c43c50-16d4-4fce-811a-e532f1d44fe3%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=NlsGP655GI%2BMc0eJ8SUTa5bt%2BTUXRqpCuyBSA1g9xfskNr5DQzDa9i1Dvs1oLv9tg0kEaysz%2BsfewF%2F%2BIDYeanuUWGUenF0VGEASMeGPOS8d6BHYglUDBS8SRmFG2EbQzy6w4hww%2BTIFnaGHHaZT3sLilvtZXmDA2aRmTORhf8YiKk2e%2FvSnwAKC%2FlZxPDdf9qCWNH%2F1%2BzxuFT0z0U80TwSpm3bqEJfTW5%2FcyY4DrHTDy8KeLR0Bakhmjx8k6ojWWrooztAqINO9mM2vWspNd7Zjr2Eafn70Cvv%2B%2FcKnelo7KtBWiNQV5zNsOqfbvB9RXHyntA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:17.409208",
+            "updated_at": "2025-10-11 02:18:42.233549"
+        },
+        {
+            "id": 64,
+            "school": 1,
+            "username": "maftuna.ismoilova290",
+            "password": "0123456789",
+            "last_cookie": "sst=b383c965-3d15-47aa-b0fd-01f8653744fb%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=M18tM5vxr0rTrHBJM9xWwP3jYwNOhoUqfLWJdDdKDxho1JWUkAu7FMfBB2i9SK1n%2BsBAqA4YVzXVN18ehFA3xGJ%2ByDg5OABDdaZpctIiyhdj%2BsNStxML7t2zKipyLt2XTfXxmmkz%2Fuj34johPB6apnuFRtuzxvaVhppSDze%2FLSSgpZYQb3ooN%2FY4IfdOZoqA4Nh7ACw7Pb5ovIUINIePGN0aeB%2F9V6ALmkrCLxB3Ym%2FTJhjRWPdQAs%2BU2VO%2FwS49Npt5RV1yucImr9f5HoNn9efT7uXV%2FahepWLG4z%2FnFCdG3Hh8B7T9EH6MDtZ%2FQOgxPKSSjw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:25.891555",
+            "updated_at": "2025-10-11 02:18:42.243453"
+        },
+        {
+            "id": 57,
+            "school": 1,
+            "username": "yakubova.sevaraxon",
+            "password": "12345a",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=sD0yAy56tOCLASDpDTnnfrp5BFKX284B%2FFqWOCGPfWj5rTXNaPuZ%2BpTkN%2FqQ1tGxoTNxOQmFHet%2FXC4K1lQ67OM%2B5SmtheQr0UtkzKsmevjZVYN2dQ3RhzwMpLx4juUVdzxXzAioMDAeQEpLUVx3GMr6Lx7Cq3oHnkuJSeWAsOhfNYenBo1OtNb%2BN9TukE6N0c9ucu%2FoqZWTIhdhfLLe%2BrOg%2BAiXlT5yXJKhs93joYPfHEAlG4aNkq3Hzb8qdhtDL%2FIdSpfkMGWet3yG1K2HerpiwWV5%2FWLcWCrTFWZR4Mb7oJdogAtz%2B9ElnEWeqmRlL6ziMg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:37:11.749442",
+            "updated_at": "2025-10-11 02:18:42.247862"
+        },
+        {
+            "id": 59,
+            "school": 1,
+            "username": "toshmatova.dilfuzaxo",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=ZXEEmNTOaq5wzon26nmNQyBZQ%2BhZLzSPOSWUqF%2BeVOqSvZM8ER0vVDSB%2BfR12Wmr9GzoCBVb7n4cYfX4BrDVbl3%2F08g%2FKrlv%2F%2FerIvT5inv6fjb6wJFFAQs%2BAISNEXE4v4fKKOCPpdQG3lKRy1DwsFpANuVQwrjItIrE%2FuMSyfI1RuNp3Dtob9%2FHT65a%2B%2FnL9HPotfs4BogQkfBFxy%2FyBH1C92zE36OL1bMQScxGqRBmj%2BeIdhLjCTheG1M%2FWQX3YzUAMNCR%2FiU6dESLPx8E7H23rfcssbJ8QPKElOU%2FEP6y%2BpDF%2B8ohZNFnSutk9BQnVyNkww%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:04.162094",
+            "updated_at": "2025-10-11 02:18:42.251909"
+        },
+        {
+            "id": 58,
+            "school": 1,
+            "username": "mavludaxonay",
+            "password": "123456",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=ngEcnCtjxytQtFf7%2BbjDNdPBr%2Bgw8SLLY4KM7MWZ8FP%2B%2Fn8QG2k1E%2BqdAYfaenl%2BhR1vifA7FjyPHG2J8acRspnjWvHEp3dlVG141R%2FYV8GDBgsqERc3%2BDHIrpxsQxylXZsmadXPn6Jf1GUvYDeR9Nrw%2BXPHX%2BftF%2BN7cF9ntw7M8UjE5d9oTImOTY6DEpuIQV3UkYFHHBJFpIpgcoNHyYd68a9igrGUbGeUDhWy9DAxfCzpZxIrM%2BH94kosZtI5Tec7q4%2BZRcrgjgfpY8fxrEK3tn45cRXsnDUP7DdiOD2SBzBXiTZ%2BhHJRiVFoC7TYdxdmyQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:37:46.560169",
+            "updated_at": "2025-10-11 02:18:42.256032"
+        },
+        {
+            "id": 61,
+            "school": 1,
+            "username": "gulnigoralijonova",
+            "password": "012345678",
+            "last_cookie": "sst=b383c965-3d15-47aa-b0fd-01f8653744fb%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=kEUIs%2FOD1K4reGPtg3rfoAuDsPJaYb7AqXG%2FqOzCDK6vr1qV7hjse%2Fw5DK73vfHSflpX85V%2BsfcSR7eZMlSKDQD1aIlLx6dkVAvfjb5PamNiBzBYIbaSIpa2tc%2FzSlbB16UwoZDQi0sWbZEc%2FKvpzP0yxE72so8W0kSbeOg5hLfu4STegrWMoGBZmaEM41FL2bkTzJlOGKih2oxy2iMm0Sx4wUv8hKXs%2FQSlEDchO98jlycd51%2B%2FjqD1k%2BfTAzF%2BfC6T%2B%2F0d%2FNvZolj%2FsPaNZJGE4HlE5%2BfqS6ntNS1CpZoCoTUjLLkfmFwUBMvjx1OCYpxiAw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:13.279234",
+            "updated_at": "2025-10-11 02:18:42.260579"
+        },
+        {
+            "id": 60,
+            "school": 1,
+            "username": "shaxnozaxonkamolova1",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=vs1stxluPjfq2nk2npiQYDIfKKKQSZfIRhZxQ4CniAt6STiBwLsusJTmQnQ%2BWbKB2wz6Sscao0BKspB3huox4eMpYo2cAzeP%2Bedf9xU3K0H6zOJCbRC0m5O2JgqzQ1c0AYt%2FfM0bxZSOeHHM2cuCtk2RpLCFmJbkLk5qEiDYs%2FuNycSjvbWAtzki35vCyR4iiu3khORZNEpf%2F%2BMZ9q11dbk%2BztiwjZeVziLk8ORXvSRyQ8r2vW3cPn8DbnwV%2F7iKHccgbbH6elIeRXlgkY0lekIonmS2lbQuZRR7JihY3YSyNlCISkDXvfynHBCbMgMRct0lrQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:09.078033",
+            "updated_at": "2025-10-11 02:18:42.228917"
+        },
+        {
+            "id": 63,
+            "school": 1,
+            "username": "bibinurumurzoqova",
+            "password": "012345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=Gn0ojIfjAr4MY7lb0IDNV7qJFVzwid1g6NmodLPWgVUvPcweuk8sT6ugjwb8SSDuO7uZwYSQSxBsGfEBIRNNaER1GrzzoCsJkvfgUjBMHrzVksai255Tc4ORoJWklsIKQTo1KbLFSA1I9nHGrJxCU4QO4Tz1u71zCqIu%2Bh1M3WFefq%2FpNaD74zRzmPXJPOGa3nNn6mvnM9%2Bxv90sY4faHwUYuPx%2B9xONnB2hsX%2BJBpVRKCSBA0M9K763kyGNU73RJsDUH341CFXRoIg%2BMafTwDaAdZWgBLxaPTB1UrMs1gwzbqJGKbcAFXEwrbjNFuLkytcHJQ%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:21.723625",
+            "updated_at": "2025-10-11 02:18:42.238814"
+        },
+        {
+            "id": 72,
+            "school": 1,
+            "username": "lolaxon.o",
+            "password": "12345a",
+            "last_cookie": "sst=92a0e628-db58-4066-aa90-6a45be762541%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=7vXbF1Sr1YfVO5np%2Bf1ldoOBVjS3tfzjeesGvnQFFNuFZw5weh0q5XAF6E1dagYGrAUMjqtoZIetX8ChbzMtJmAvTTrUumLF1kkc%2FfWR8BvDi%2BVYZ1Ma2jgtQhWwPbn10Juhq3HG4etMG3keo2PzcPB3GigryS1AAJ5bwKWUep2JKI4T3mxZO2BVIs59Pdla5WpGjfCZyq8d%2BX21B1JY44lMqbqb61BOm0r7aEKAkVzTcPaa6kdb5WgT9HvHMF3YIU1KdQIp6HNIQ48Ndj2%2B4bYvs%2FMVtwJc1Z9BYIe342G5e4w8VMRhyf6nbhvgDBL2Fy9mYw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 07:15:03.698674",
+            "updated_at": "2025-10-11 02:18:42.275792"
+        },
+        {
+            "id": 73,
+            "school": 1,
+            "username": "adaxamjonovag",
+            "password": "123456",
+            "last_cookie": "sst=b383c965-3d15-47aa-b0fd-01f8653744fb%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=gnd%2B49CNJ%2ByuxUzVa%2FnK%2BGPwUezipnu312cihgT87yluakOyEEGUhQ%2F43OUayy5miFhhcJoLNwFCraB2JMFZesnLeBhAogSHZb78v3e0P6HCcfYve%2F4xvcybeEQOsBSwzvNaOO1KvbpB0SObRfCAKa2pJqruJJdUd%2B%2B7HgjqGQ96Sz36IKvr9M3TrAyg2HYMcDdvIPnzSgS4H2TdwjdK8sFSjFzNmRGHwZNyh%2BmEjLWiHYKTmxlUx60AadYmsZqqAMruT0keDHpBhrMUkZZC6u7l69vlbVlyH7YJWMlDcnvnkv2cvayZkwWN%2BPk1Bx%2BJQVAjpg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 07:15:03.702257",
+            "updated_at": "2025-10-11 02:18:42.280532"
+        },
+        {
+            "id": 66,
+            "school": 1,
+            "username": "setoraiminova",
+            "password": "012345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=3abNw0lpz74gtQtQghuU%2FV2wWqcUNIhFLHsPXXM5VGCEUlyBaRLNjocPnKX%2Fe%2FeuSx8dB4o4jJkhHA1SFmOPW2p4Rq37d0ytKPNHpye%2BZfhnaiSscLkSG6DryGRH4zXNLv4cFwfu9JXlJ1w5ijBiaonnnhku43Sgu13NCKUPx%2F3TXoAgf%2BKhdkNO2c4EzRUpsDysNiDgMfTdx2iDpgHn%2B50znqv460Lilhl5Ly%2FNKAXMXNxOP4eU43pwb%2BLDw%2BEQwxE%2F0Hs0QGEQQPRRt0hv2%2Bo4LuV7tfDjyZun1QAOzXL57E16JpvbtRt21S3WDWYTOJNE7Q%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:47.131262",
+            "updated_at": "2025-10-11 02:18:42.285456"
+        },
+        {
+            "id": 67,
+            "school": 1,
+            "username": "usmonjontoshmamatov",
+            "password": "012345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=FhEsvukJuKyXsJ65Gcr5Xe5o3lHDqTQ8%2BnUoONlYLPNRLgLHxaxVgqCozoVGHoF%2FbHqPJiWcddtsfKAghiOpGKL6xQYn5IR%2FM%2BymQc3DzbWMa3albu6Ka9s306U23lwdADP9W3LrdF4ROmp8pARMfHAVzkDd5YNb1N33eKFx1vHWvOG285BzBiA8pEAyIXBTtVE6szJCRv9s%2BjuX%2BknXf7NGwaZUfA6CMeABkfAZwHuXBgUKYe2hbB0ij%2Fj3iohuAEUenDFdZKPBpIKTvfxtujnMclhSy1EGt%2FTh8yiZJ5EwGNXMGE9x1hHo%2B%2BgGVc7iUFWlZA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:54.893210",
+            "updated_at": "2025-10-11 02:18:42.289813"
+        },
+        {
+            "id": 68,
+            "school": 1,
+            "username": "zakiyaxonerkinjonova",
+            "password": "012345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=PNFguTI9VAmwFWlqHl%2FF8EEIyqgzahrqx4wivCtIAsb3wnACAiXdgA4%2Fwaq6SwQto%2F50X7YVaU9vBOjJ68DVpNNq%2BgXSxmUxZHwDmRw4LCX1KSm3%2FDmou0psHTQlojIeHVDdSZpstzMQwW%2FsaK38naiK218PluL%2F0sFXyoPyyezJ%2FoJDq7GVNeRZmAInHPYpOjI3XcTansQyqL0Y%2FBcJilde61q96Mn3s5VUC0%2BPZTp2GV%2FiVYCo82eZnrcwB2gYknQPV7G2maGToUW5dsPpS5FVh88si1fyXtpxy4eihVJpywz6C%2FFHC%2Bdll%2BFH1XcYRqbtqA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:58.941205",
+            "updated_at": "2025-10-11 02:18:42.294614"
+        },
+        {
+            "id": 69,
+            "school": 1,
+            "username": "maftuna.toxirjonova1",
+            "password": "012345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=MLwTD9%2FZOEQkF%2FAdr2Ec4fzrqJ0xfyAtwQlijmuoA3cbdUwK2xDkPSbWpl0u1fCz%2FRp%2FpdwmjLLGRGUtrhecjtAd8CUyNQiMNBcLWCa6A5yvM5Gg4Km2yX4ffgiJlwOn1rEgfnnFALBgEBEiU3PSeD9ZWZNfQV8TcEDdjBSlsfQiwiP9bQ8IUVpxiKwwmgK5kGScBa68gCWvBVnmUuJbzG43m7ilOkPxIxKn4ITLBPJcjHlx6OQeBF3VxgUp6%2BrRabuSU6YykP2s1ZLg6AZYEfQLYQLEkWjINxS0eV%2BVskAX%2BKkTVRdLow4zLfRcTUTRmXjG0A%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:41:45.803776",
+            "updated_at": "2025-10-11 02:18:42.299720"
+        },
+        {
+            "id": 70,
+            "school": 1,
+            "username": "xamidullo.azamjonov",
+            "password": "012345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=dvMRfT5pLmy9OIMJhSi5eg69mhVqkjhZggoKO5ieLiTbUR32fCIrXAEMbGho4UwpjiguRryWd3m6OT9CoFd%2BI0sakXLKp3JqHJBLyBuj0Vc8oOv9wdCwY68vXgDwI5hsrFaDjGIYSG%2Fiv%2B8uvjAFfgPFR%2Ba7zuoupdPLxfha9JDAOM85VGAYT5pQhp2pdnUWA%2B4sU6hlLoTeSjYoNAoYI6NIptwcH30%2FQTY%2FdkGu7XgVFf9mSwOWKspQnK0XnwuMDhibbn9jbNStQIjSkpH4MPEopMSzCzTD7lEXAtIVYH4fWgXUyPpEjQdASaU27ghlX1ZF%2Bg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:42:59.525290",
+            "updated_at": "2025-10-11 02:18:42.265688"
+        },
+        {
+            "id": 71,
+            "school": 1,
+            "username": "sotinboyevm",
+            "password": "012345678",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=jSuz2h8sGKhwXUbjdw6fLmPuW1iAUNFCU6akzXEymPdl6WAYkUE35OX5XJ3cqLncnJ0kOOHjKGVB2WvE%2BUlcvaLkFmYdnB7NmGvd1KpcO6P4hyo%2FCommegCvIOKw9vEFMvz4n3ocVGJ4BONcSWSSdKCT35aZeibd1%2BqX%2BvU%2B8Kmnk9MOzxWSdD99VzAYTcOlyVLphcC6sam14vjNPkrN63F2TJYt%2Fpcsg9VXmNqe2bRa3i96ume%2FW3zfVAl98HSsSD6VWLU7vOWeO5urmMMR2XmTfOudS1YeqD5TH%2FjlxPQ4qpmZJybAt0Y7DTQmnMUSnH8M3w%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:43:05.511239",
+            "updated_at": "2025-10-11 02:18:42.270511"
+        },
+        {
+            "id": 76,
+            "school": 1,
+            "username": "ravshanoytolipova",
+            "password": "123456",
+            "last_cookie": "sst=92c43c50-16d4-4fce-811a-e532f1d44fe3%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=ct5xLpKnbKVVyYlzyzmf90MT%2FAojDU%2FThbXx5SAVyrcqWjExF4VXzeCh1Qh8RY9K%2BB45PeD4WRtj9%2BL7%2BBVuLBkwcmlRucNFPMCXckiuqSHJ%2BDfUmNgLP40I2UmJvBgqKHotxsFrGdWJVqHp4cAQD5vJcRu6jnNCX45k%2BHMP7ENjFbwT4OeQJkGWME09iv7ftRYG5lc4ZBR1Ln9Y88ux6LlzkLGDNrTaAaSl9To5as%2FLey1LiR%2BPS0zRcmrdEbytpud8yad1GONJQtAq%2FUmYFVfnzpzVLhoLvRGlcT4ij58Kz4eRA2OkJSYOHVV6ZeHlsZKJ1w%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 07:15:05.232871",
+            "updated_at": "2025-10-11 02:18:42.310131"
+        },
+        {
+            "id": 74,
+            "school": 1,
+            "username": "mirzabaxromovas",
+            "password": "123456789",
+            "last_cookie": "sst=5f8b56ee-73d9-4bcf-a4ba-90e14db1a395%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=zkCTqwJeMHUpcKbXZoncrzbNFXn52V1jGQJKr9liZDj%2BUDgVcuLAf%2F%2FUG2MoH6%2FPytdALopPTRXPwPzMQ0dfim06qL%2Fyqfr5K1PHK7aBOFG4HQ4HQZGv7VXXRaCoaQyjs%2BXJmEtQqw7iHfhpIdb9wMMKBM4pvZATa4o7e9pjJSH0k9X%2F4n3l1AQ3RJV10jPrzXeGEqhWR2yKlzSYCzGkS902VRyFME5%2F4u7Ewg476OgoG%2FvJbwRsmG3BHRDqbuF5SEfFQLgZXtaHV%2Bdmv1dvsLSC%2B%2FalhLJ1cx9Q0qGn0ttInq9sq2OFI%2F4wnXirHz%2BxlUOUUA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 07:15:03.906198",
+            "updated_at": "2025-10-11 02:18:42.326026"
+        },
+        {
+            "id": 75,
+            "school": 1,
+            "username": "muxammatazizorifov",
+            "password": "123456789",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=aoaW66hKThMVpY1LpHSmKLqYXu6vEMKsQvS7b6zbalJnbfDwF95aGcZYXO1Qy8dY6iidL89lmjLkRapiCy79lxx4SOKW6XIbD3NL9RZA9NofsCWjwa%2BpLrV%2BjkPLQYtlX3o%2F1q56o1dkORtdfsY%2BUscsMXvGFVK3bmmdj4dQ33tQ%2Fbib%2BGIVl0syb5t%2Btql%2BpSXP%2FeVj5DnLC4hwI3TeYGn1tNGL3OkEvmy46z8I7x%2BO9rs3A2D5YZF2Yjf1%2BEwoYLNkx4HNLzcFEOow036av0sLanMoUPWthB9TSeGHgKnIkoXtSCsS3u5xZFKCIry%2B4RVLTg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 07:15:03.915730",
+            "updated_at": "2025-10-11 02:18:42.331027"
+        },
+        {
+            "id": 41,
+            "school": 1,
+            "username": "tulkinjonyunusov",
+            "password": "12345678",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=r45NUr37xcyhFi8fffBuj8wKpwamFRQQLUUtR36OmIJ6D2UgwpqqcgRbjDuxa4farTJCZe8IOWSf%2FV%2FU7byNTNBQfNPyIwb%2B1b5necZv1GQbI2jocVeHfuMJQSiB%2FYTQoO094wxe3vr00PoSsUI9Yo6Svngu5oMi3sn92%2Fw5x9bgNWkHNU5U6EHWBq6fRJ0SR%2BV8QdWoJFO%2BZFb5v5js3I2bCwIadr7S1VPrSvvHeL0TntF6QRHyM2Ann37%2FSF3z3wIFYGBOdB%2B56E9uHeMGdLhenFvHDDo7mcA6yLsg2N93dTeXdYl4lcIhG857aQSfW34V6g%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-03 15:21:09.507976",
+            "updated_at": "2025-10-11 02:18:42.335916"
+        },
+        {
+            "id": 47,
+            "school": 1,
+            "username": "kamolaxonmaxammatova",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=5IISZ9Kcz%2B266cEvo3iV9%2FDznEm%2Fz55q61%2FUTGqqZtTwUDrFDxAN7xVI2RwU8I%2BxXtG57LR1deWTP8EMQzmzifFID35%2FBXrAA9K5RK0Otn%2BXdoRMyTstNfyAGOnVNtDv3BE6oftiCuP2B8X3pWzde30EuoMthfaPd4YIchWxl8Vs6GPIJxy7v5e7OF8ydqzXv7y9rc6umpJpxdQNFALICLTwK9ZVUMsyfE6l6zej1IOsgIi43Z6XdsH%2B%2Femx5kqJpJJElvThZo%2Ba%2BRJH7JRAoeJ2NAgmHiR8ebu2m9uZyWKweXADNsQ8MG0F5TQP9X4ndDcifA%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:29:30.147214",
+            "updated_at": "2025-10-11 02:18:42.304806"
+        },
+        {
+            "id": 56,
+            "school": 1,
+            "username": "polatxonxaydarova",
+            "password": "123456",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.3; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=KOIl%2BuFfd8ryMEC1gGCP5TzbFxPnIbd6p9vF9Ba83xfSp8Q%2F%2FY%2FoLkcQDj%2FS7U2aFnCgrXSU6iRedsIsebewWaRpXU%2FdGmVyhonpK%2FAp3IAEEX%2FS1n67I9YJTeoNBIu0ZIjcczT73pkAGfIDUW3k7VXdFwDC0dO6wR%2Fpc28K%2BRbwo%2BC22ZUH961qhBDcAyRTuMcY%2FDS2YnqZaLytWG8TSUH2F7QzdoJSjsxUzy%2Bk%2B9r8gL%2BzxJoFTT8qXTxPlVQiuGhQbwAF5OwjgUV36gAJXiTQzid93hsO1HqS%2BpNmpw7m0sOCeulIbCHhua6mx8aa5LbwNw%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:37:01.934483",
+            "updated_at": "2025-10-11 02:18:42.315841"
+        },
+        {
+            "id": 65,
+            "school": 1,
+            "username": "izzatillo.tursunboye",
+            "password": "0123456789",
+            "last_cookie": "sst=2cbbc090-f364-496f-9bd6-20a869bc4773%7C12%2F10%2F2025%2002%3A18%3A41; a_r_p_i=13.2; UZDnevnikAuth_a=VnorO7O3WAGAsXadrmoXlRgiYYVoK69nCwiHpWnAiNW0%2F%2B%2BALRuXGMC7uoiKwo%2FHFqE%2Frf9pnWD8cXOR%2BB4aEjDMwla5a19bNyL7SspeAGEr3jpaadx1MwtDF8zoYjzTbn33dA%3D%3D; t0=1000006479820; t1=; t2=; dnevnik_rr=False; UZDnevnikAuth_l=4xnPyUBNqHnyUXokJsiEyC8wHGxgPCcwwGZpiqJzxHDHg0si2uCqjRPcSB7T6dhclDmgR8KOAg%2FobZc0BrRxv2nJumZCkt2xlj%2F97rlBxxlu6Gx3%2FnnfHNYLOpyVAnLgs7VWb9BS4TMkQueVdCYtEYss9C5HRDsp6lMFUHaHrrqbjl1jgrTiS%2Ffl8TFTN3l2XI9UeHjf5rRFzwK2nuUglmirFo8z%2FtyyRW8CZqJI59GGj8UYodWFzYFakMfNkrTGPQ%2BsrcKRzOavCLBeU4reyMYDZYeEMwLfga6W7n27OfUJ2C%2FHWVd3lhQoX7m1xF3Fuz%2FWLg%3D%3D",
+            "last_login": true,
+            "created_at": "2025-10-10 06:39:31.455328",
+            "updated_at": "2025-10-11 02:18:42.321028"
+        }
+    ]
+}
