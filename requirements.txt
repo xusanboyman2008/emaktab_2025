@@ -1,6 +1,3 @@
-requests
-CaptchaCracker
-pillow
 blinker==1.7.0
 asyncpg
 aiogram
@@ -11,3 +8,6 @@ sqlalchemy
 hypercorn
 quart
 flask[async]
+pytesseract
+pillow
+requests

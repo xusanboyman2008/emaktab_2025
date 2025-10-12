@@ -1,29 +1,4 @@
 {
-    "User": [
-        {
-            "id": 1,
-            "first_name": "(►__◄) T_T X_X xusanboyman",
-            "username": "xusanboyman200",
-            "tg_id": 6588631008,
-            "role": "owner",
-            "lang": "uz",
-            "grade": "42",
-            "captcha_for_web": null,
-            "captcha_for_bot": null,
-            "school_id": 1
-        }
-    ],
-    "School_number": [
-        {
-            "id": 1,
-            "school_url": "Eq2mA4EGgiLf7Yp",
-            "school_number": 14,
-            "place": "Andijon viloyati, Marhamt tuman, Rovot MFY",
-            "is_paid": false,
-            "created_at": "2025-10-12 21:25:10.538731",
-            "expire_at": "2026-10-12 21:25:10.536744"
-        }
-    ],
     "Logins": [
         {
             "id": 1,

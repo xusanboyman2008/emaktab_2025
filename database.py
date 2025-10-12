@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import random
 import string
 from datetime import datetime, timedelta
@@ -14,7 +15,7 @@ async def generate_unique_url(length: int = 15):
     # all ascii letters (uppercase + lowercase) + digits
     chars = string.ascii_letters + string.digits
 
-    # build random string of given length
+    # build random string of given zzlength
     ready_text = ''.join(random.choice(chars) for _ in range(length))
 
     # check if this already exists in DB
@@ -206,25 +207,33 @@ async def update_user(Tg_id, school_url):
 async def create_school(school_number, place, days, edit=False):
     async with async_session() as session:
         async with session.begin():
-            a = await session.execute(select(School_number.school_number).where(and_(
-                School_number.school_number == school_number,
-                School_number.place == place
-            )))
+            a = await session.execute(
+                select(School_number.school_number).where(
+                    and_(
+                        School_number.school_number == int(school_number),
+                        School_number.place == place
+                    )
+                )
+            )
             r = a.scalar_one_or_none()
             if r:
                 if edit:
-                    r.expire_at = datetime.now() + timedelta(days=days)
+                    r.expire_at = datetime.now() + timedelta(days=int(days))
                     await session.commit()
                     return r
                 return r
+
             url = await generate_unique_url()
-            new_school = School_number(school_number=school_number, place=place,
-                                       expire_at=datetime.now() + timedelta(int(days)), school_url=url)
+            new_school = School_number(
+                school_number=int(school_number),
+                place=place,
+                expire_at=datetime.now() + timedelta(days=int(days)),
+                school_url=url
+            )
             session.add(new_school)
             await session.commit()
             await session.flush()
-            n = new_school
-            return n
+            return new_school
 
 
 async def get_school_number(url=None, id=None):
@@ -300,14 +309,13 @@ async def create_login(password, username, last_login, cookie, grade: str, schoo
             r = a.scalar_one_or_none()
             if r:
                 return False
-            grade_id = await get_grade(grade)
             if tg_id:
                 user = await create_user(tg_id)
                 new_login = Logins(password=password, username=username, last_login=last_login, last_cookie=cookie,
-                                   school=user.school_id, grade=grade_id.id)
+                                   school=user.school_id, grade=grade)
             else:
                 new_login = Logins(password=password, username=username, last_login=last_login, last_cookie=cookie,
-                                   school=school_number_id, grade=grade_id.id)
+                                   school=school_number_id, grade=grade)
             session.add(new_login)
             await session.commit()
             return True
@@ -441,7 +449,7 @@ async def create_database_back_up():
 
 
 async def read_logins():
-    file_path = Path("new_Database.json")  # Path to your file
+    file_path = Path("database12.json")  # Path to your file
 
     # Read JSON file asynchronously (in a background thread)
     data = await asyncio.to_thread(
@@ -473,8 +481,17 @@ async def main():
     await read_logins()
     # await create_grades()
     # await add_captchas_by()
-    # await create_database_back_up()# run your DB init
+    # await create_database_back_up()  # run your DB init
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import asyncio, sys
+    if sys.platform.startswith("win"):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    try:
+        asyncio.run(main())
+    except RuntimeError as e:
+        # Ignore harmless Windows SSL cleanup error
+        if "Event loop is closed" not in str(e):
+            raise
