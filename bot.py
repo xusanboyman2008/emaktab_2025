@@ -615,7 +615,7 @@ async def login_schedule(user: int | None = None):
                 f"📊 Jami loginlar: {total_all}\n"
                 f"✅ Kirilgan: {total_success}\n"
                 f"❌ Kirilmagan: {total_fail}\n"
-                f'<a href="https://t.me/{bot_data.username}?start=logins_{user_obj.school_id}_True_0">'
+                f'<a href="https://t.me/{bot_data.username}?start=logins_{user_obj.school_id}_True_{user_obj.grade}">'
                 f"Barcha loginlarni ko‘rish uchun bu yerga bosing</a>"
             )
 
