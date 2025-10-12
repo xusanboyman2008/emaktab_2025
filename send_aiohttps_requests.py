@@ -29,7 +29,7 @@ async def fetch(session, student_id, student, sem):
 
 async def cookie_login(students_dict):
     sem = asyncio.Semaphore(50)  # 👈 limit to 50 concurrent fetches
-    connector = aiohttp.TCPConnector(limit=70)  # also limit open TCP connections
+    connector = aiohttp.TCPConnector(limit=10)  # also limit open TCP connections
 
     async with aiohttp.ClientSession(connector=connector) as session:
         tasks = [

@@ -448,6 +448,16 @@ async def create_database_back_up():
         return True
 
 
+async def read_users():
+    file_path = Path("database12.json")  # Path to your file
+
+    # Read JSON file asynchronously (in a background thread)
+    data = await asyncio.to_thread(
+        lambda: json.load(open(file_path, "r", encoding="utf-8"))
+    )
+
+    # Access the "Logins" list
+    logins = data.get("Logins", [])
 async def read_logins():
     file_path = Path("database12.json")  # Path to your file
 
