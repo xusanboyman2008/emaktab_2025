@@ -38,7 +38,7 @@ async def cookie_login(students_dict):
         ]
 
         results = await asyncio.gather(*tasks)
-
+        print('checking cookies')
         for sid, success, new_cookies in results:
             if not new_cookies:
                 students_dict[sid]["last_login"] = success
@@ -57,12 +57,12 @@ async def cookie_login(students_dict):
             merged_cookie = "; ".join([f"{k}={v.value}" for k, v in cookie.items()])
             students_dict[sid]["last_cookie"] = merged_cookie
             students_dict[sid]["last_login"] = success
-
             await update_logins(
                 login_id=students_dict[sid]["login_id"],
                 last_login=success,
                 last_cookie=merged_cookie
             )
+        print('cookies updated')
 
         return students_dict
 
@@ -130,7 +130,7 @@ async def send_request_main(students):
         print('b')
         updated.update(await username_login(username_logins))
 
-    print("✅ Final result:", updated)
+    print("✅ Final results ready")
     return updated
 
 

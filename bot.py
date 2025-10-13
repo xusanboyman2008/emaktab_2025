@@ -623,14 +623,20 @@ async def login_schedule(user: int | None = None):
 
         # If user is not admin — send only their own class info
         else:
-            key = (user_obj.school_id, user_obj.grade)
-            send_message2 = grouped.get(user_obj.school_id)
-            send_message = send_message2.get(user_obj.grade)
+            print(grouped,user_obj.school_id,user_obj.grade)
+            key = (int(user_obj.school_id), str(user_obj.grade).strip())
+            send_message = grouped.get(key)
+            print("_"*80,send_message)
             if not send_message:
+                print("⚠️ No logins found for:", key)
                 return
 
-            s = sum(0 for d in send_message.values() if d.get("last_login"))
-            f = sum(0 for d in send_message.values() if not d.get("last_login"))
+            if not send_message:
+                return
+            print("DEBUG:", user_obj.school_id, user_obj.grade, grouped.keys())
+            s = sum(1 for d in send_message.values() if d.get("last_login"))
+            f = sum(1 for d in send_message.values() if not d.get("last_login"))
+
 
             text = (
                 f"🏫 Maktab raqami: {(await get_school_number(id=user_obj.school_id)).school_number}\n | Sinfi: {(await get_grade(id=user_obj.grade)).grade}\n"
