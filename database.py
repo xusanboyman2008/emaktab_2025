@@ -143,7 +143,7 @@ async def get_grade(grade=None, id=None):
             if id:
                 a = await session.execute(select(Grades).where(Grades.id == int(id)))
             else:
-                a = await session.execute(select(Grades).where(Grades.grade == grade))
+                a = await session.execute(select(Grades).where(Grades.grade == grade.strip()))
             r = a.scalar_one_or_none()
             if r:
                 return r
@@ -160,7 +160,7 @@ async def create_user(tg_id, grade=None, first_name=None, username=None):
             if existing_user:
                 # Update grade if provided and valid
                 if grade:
-                    grade_obj = await get_grade(grade)
+                    grade_obj = await get_grade(grade=grade)
                     if grade_obj:
                         existing_user.grade = str(grade_obj.id)  # or grade_obj if it's a relationship
                         await session.commit()
@@ -187,6 +187,13 @@ async def create_user(tg_id, grade=None, first_name=None, username=None):
             await session.commit()
             await session.flush()
             return new_user
+
+
+async def get_logins_grade_for_web(logins):
+    async with async_session() as session:
+        async with session.begin():
+            a = await session.execute(select(Grades).where(Grades.id.in_(logins)))
+            return a
 
 
 async def update_user(Tg_id, school_url):

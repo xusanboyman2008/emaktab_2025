@@ -21,8 +21,9 @@ from database import get_all_logins, create_logins_data, create_login, create_us
     update_user, add_captcha_id, get_free_captcha, get_school_number, create_database_back_up, \
     create_or_change_user_role, init, give_captcha_100
 from database import get_all_schools
-from send_aiohttps_requests import send_request_main
 from database import get_grade
+from database import get_logins_grade_for_web
+from send_aiohttps_requests import send_request_main
 
 # Create account once (not inside the handler every time!)
 telegraph = Telegraph()
@@ -71,9 +72,9 @@ def grades_button(current_page: int):
 
     # Define start and end grades for each page
     if current_page == 1:
-        start, end = 1, 5   # 1–4
+        start, end = 1, 5  # 1–4
     elif current_page == 2:
-        start, end = 5, 9   # 5–8
+        start, end = 5, 9  # 5–8
     else:
         start, end = 9, 12  # 9–12 (Python range is exclusive)
 
@@ -91,8 +92,10 @@ def grades_button(current_page: int):
 
     # Navigation buttons (👇 don't touch these)
     nav_buttons = [
-        InlineKeyboardButton(text="👈", callback_data=f"page_{3 if current_page == 1 else 2 if current_page == 3 else 1}"),
-        InlineKeyboardButton(text="👉", callback_data=f"page_{2 if current_page == 1 else 3 if current_page == 2 else 1}"),
+        InlineKeyboardButton(text="👈",
+                             callback_data=f"page_{3 if current_page == 1 else 2 if current_page == 3 else 1}"),
+        InlineKeyboardButton(text="👉",
+                             callback_data=f"page_{2 if current_page == 1 else 3 if current_page == 2 else 1}"),
     ]
     rows.append(nav_buttons)
 
@@ -108,17 +111,14 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
     if payload:
         if payload.startswith("logins"):
             school_id = payload.split("_")[1]
-            is_admin = payload.split("_")[2]
             grade = payload.split("_")[3]
-            grade_id = await get_grade(id=grade)
             user = await create_user(tg_id=message.from_user.id)
             school_number = await get_school_number(id=int(school_id))
 
             # Security check
             if (
                     int(user.school_id) != int(school_id)
-                    and user.role.lower() != 'owner'
-                    and int(grade_id.id) == int(user.grade_id)
+                    and int(grade) == int(user.grade)
             ):
                 base_text = "🚫 Ushbu maktabga oid ma’lumotlar siz uchun emas."
                 msg = await message.answer("⏳ Tekshirilmoqda...")
@@ -137,8 +137,17 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                 all_logins = await get_all_logins(school2=school_id)
 
                 grouped = defaultdict(list)
+
+                # ✅ Step 1: collect unique grade IDs
+                grade_ids = {login.grade for login in all_logins}
+
+                # ✅ Step 2: fetch all grades in one query
+                grades = await get_logins_grade_for_web(logins=grade_ids)
+
+                # ✅ Step 3: group logins by grade name
                 for login in all_logins:
-                    grouped[(await get_grade(id=login.grade)).grade].append(login)
+                    grade_name = grades.get(login.grade, "Unknown")
+                    grouped[grade_name].append(login)
 
                 s_t, f_t = "", ""
                 s, f = 0, 0
@@ -194,8 +203,10 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                 stats_url = stats_page["url"]
 
                 # Create detailed pages
-                success_html = f"<h3>✅ Kirilgan loginlar ({s} ta)</h3>" + (s_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
-                fail_html = f"<h3>❌ Kirilmagan loginlar ({f} ta)</h3>" + (f_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+                success_html = f"<h3>✅ Kirilgan loginlar ({s} ta)</h3>" + (
+                            s_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+                fail_html = f"<h3>❌ Kirilmagan loginlar ({f} ta)</h3>" + (
+                            f_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
 
                 success_page = await to_thread(
                     telegraph.create_page,
@@ -228,82 +239,116 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                 await state.clear()
                 return
 
-            # 👩‍🏫 Normal user — single grade only
-            logins = await get_all_logins(school2=school_id, grade=grade_id.id)
-            s_t, f_t = "", ""
-            s, f = 0, 0
+            # 🧩 Admin / Owner — show all grades grouped
+            if user.role.lower() in ("user"):
+                all_logins = await get_all_logins(school2=school_id,grade=user.grade)
 
-            def format_time(dt):
-                return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
+                grouped = defaultdict(list)
 
-            def mask_text(text: str) -> str:
-                return text[:2] + "*" * 8
+                # ✅ Step 1: collect unique grade IDs
+                grade_ids = [login.grade for login in all_logins]
 
-            for i in logins:
-                row = f"""
-                <b>ID:</b> {i.id}<br>
-                <b>👤 Login:</b> {mask_text(i.username)}<br>
-                <b>🔑 Parol:</b> {mask_text(i.password)}<br>
-                <b>📌 Holat:</b> {'✅ Kirilgan' if i.last_login else '❌ Kirilmagan'}<br>
-                <b>⏰ So‘nggi kirish:</b> {format_time(i.updated_at)}<br>
-                <hr>
+                # ✅ Step 2: fetch all grades in one query
+                grades = await get_grade(id=grade_ids[0])
+
+                # ✅ Step 3: group logins by grade name
+                if not all_logins:
+                    await msg.edit_text('Loginlar mavjud emas /start')
+                    return
+                for login in all_logins:
+                    grade_name = grades.grade
+                    grouped[grade_name].append(login)
+
+                s_t, f_t = "", ""
+                s, f = 0, 0
+
+                def format_time(dt):
+                    return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
+
+                def mask_text(text: str) -> str:
+                    return text[:-2] + "*" * 2
+
+                for grade_name in sorted(grouped.keys()):
+                    grade_logins = grouped[grade_name]
+
+                    success_block = f"<h3>📗 {grade_name} sinf (✅ Kirilganlar)</h3>"
+                    fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
+
+                    for i in grade_logins:
+                        row = f"""
+                        <b>ID:</b> {i.id}<br>
+                        <b>👤 Login:</b> {mask_text(i.username)}<br>
+                        <b>🔑 Parol:</b> {mask_text(i.password)}<br>
+                        <b>📌 Holat:</b> {'✅ Kirilgan' if i.last_login else '❌ Kirilmagan'}<br>
+                        <b>⏰ So‘nggi kirish:</b> {format_time(i.updated_at)}<br>
+                        <hr>
+                        """
+                        if i.last_login:
+                            s += 1
+                            success_block += row
+                        else:
+                            f += 1
+                            fail_block += row
+
+                    s_t += success_block
+                    f_t += fail_block
+
+                total = s + f
+                stats_html = f"""
+                <h3>{school_number.school_number}-maktab {grades.grade}-sinf <br> 📊 Umumiy statistika</h3>
+                <b>👥 Jami loginlar:</b> {total}<br>
+                <b>✅ Kirilgan:</b> {s}<br>
+                <b>❌ Kirilmagan:</b> {f}<br>
+                <b>📈 Muvaffaqiyat foizi:</b> {round((s / total * 100), 1) if total else 0}%<br><br>
+                <a href="{{success_url}}">✅ Kirilgan loginlarni ko‘rish</a><br>
+                <a href="{{fail_url}}">❌ Kirilmagan loginlarni ko‘rish</a>
                 """
-                if i.last_login:
-                    s += 1
-                    s_t += row
-                else:
-                    f += 1
-                    f_t += row
 
-            total = s + f
-            stats_html = f"""
-            <h3>{school_number.school_number}-maktab {grade_id.grade} sinf 📊 Statistika</h3>
-            <b>👥 Jami loginlar:</b> {total}<br>
-            <b>✅ Kirilgan:</b> {s}<br>
-            <b>❌ Kirilmagan:</b> {f}<br>
-            <b>📈 Foiz:</b> {round((s / total * 100), 1) if total else 0}%<br><br>
-            <a href="{{success_url}}">✅ Kirilganlarni ko‘rish</a><br>
-            <a href="{{fail_url}}">❌ Kirilmaganlarni ko‘rish</a>
-            """
+                # Create temporary page
+                stats_page = await to_thread(
+                    telegraph.create_page,
+                    title="Loginlar statistikasi",
+                    html_content=stats_html.replace("{success_url}", "#").replace("{fail_url}", "#")
+                )
+                stats_url = stats_page["url"]
 
-            stats_page = await to_thread(
-                telegraph.create_page,
-                title="Loginlar statistikasi",
-                html_content=stats_html.replace("{success_url}", "#").replace("{fail_url}", "#")
-            )
-            stats_url = stats_page["url"]
+                # Create detailed pages
+                success_html = f"<h3>✅ Kirilgan loginlar ({s} ta)</h3>" + (
+                            s_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+                fail_html = f"<h3>❌ Kirilmagan loginlar ({f} ta)</h3>" + (
+                            f_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
 
-            success_html = f"<h3>✅ Kirilgan loginlar ({s} ta)</h3>" + (s_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
-            fail_html = f"<h3>❌ Kirilmagan loginlar ({f} ta)</h3>" + (f_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+                success_page = await to_thread(
+                    telegraph.create_page,
+                    title=f"{school_number.school_number}-maktab ✅ Kirilganlar",
+                    html_content=success_html
+                )
+                success_url = success_page["url"]
 
-            success_page = await to_thread(
-                telegraph.create_page,
-                title=f"{grade_id.grade} sinf ✅ Kirilganlar",
-                html_content=success_html
-            )
-            success_url = success_page["url"]
+                fail_page = await to_thread(
+                    telegraph.create_page,
+                    title=f"{school_number.school_number}-maktab ❌ Kirilmaganlar",
+                    html_content=fail_html
+                )
+                fail_url = fail_page["url"]
 
-            fail_page = await to_thread(
-                telegraph.create_page,
-                title=f"{grade_id.grade} sinf ❌ Kirilmaganlar",
-                html_content=fail_html
-            )
-            fail_url = fail_page["url"]
+                # Update main stats with working URLs
+                final_stats_html = stats_html.replace("{success_url}", success_url).replace("{fail_url}", fail_url)
+                await to_thread(
+                    telegraph.edit_page,
+                    path=stats_page["path"],
+                    title=f"{school_number.school_number}-maktab statistikasi",
+                    html_content=final_stats_html
+                )
 
-            final_stats_html = stats_html.replace("{success_url}", success_url).replace("{fail_url}", fail_url)
-            await to_thread(
-                telegraph.edit_page,
-                path=stats_page["path"],
-                title="Loginlar statistikasi",
-                html_content=final_stats_html
-            )
+                await msg.edit_text(
+                    f'<a href="{stats_url}">📖 {school_number.school_number}-maktab {grades.grade}-Sinf loginlari</a>',
+                    parse_mode="HTML",
+                    protect_content=True
+                )
+                await state.clear()
+                return
 
-            await msg.edit_text(
-                f'<a href="{stats_url}">📖 {grade_id.grade} sinf loginlari</a>',
-                parse_mode="HTML",
-                protect_content=True
-            )
-            await state.clear()
 
         if payload == 'owner':
             users = await get_all_users()
@@ -315,7 +360,7 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
             await message.answer('Siz bilan tez orada ma`sul shaxslar aloqaga chiqishadi')
             return
     if not lan.grade or payload == "grade_change":
-        await message.answer('Iltimos sinfingizni tanlang',reply_markup=grades_button(1))
+        await message.answer('Iltimos sinfingizni tanlang', reply_markup=grades_button(1))
         return
     if payload:
         if payload == 'clear':
@@ -343,22 +388,26 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
 
 
 @dp.callback_query(F.data.startswith("grade_"))
-async def catch_grade(callback:CallbackQuery):
+async def catch_grade(callback: CallbackQuery):
     data = callback.data.split("grade_")[1]
-    number,letter = data.split('_')[0],data.split('_')[1]
+    number, letter = data.split('_')[0], data.split('_')[1]
     print(callback.from_user.id)
-    user =  await create_user(tg_id=callback.from_user.id,grade=f"{number}{letter}")
-    await callback.message.edit_text(text=f"Siz {number}-{letter} sinfdasiz")
+    user = await create_user(tg_id=callback.from_user.id, grade=f"{number}{letter.upper()}")
+    await callback.message.edit_text(text=f"Siz {number}-{letter.upper()} sinfdasiz")
+
 
 @dp.callback_query(F.data.startswith('page_'))
-async def pages(callback_query:CallbackQuery):
+async def pages(callback_query: CallbackQuery):
     data = callback_query.data.split("page_")
     try:
-        await callback_query.message.edit_text(reply_markup=grades_button(int(data[1])),text="Iltimos sinfingizni tanlang")
+        await callback_query.message.edit_text(reply_markup=grades_button(int(data[1])),
+                                               text="Iltimos sinfingizni tanlang")
         return
     except TelegramBadRequest:
-        await callback_query.message.edit_text(reply_markup=grades_button(int(data[1])),text="<i>Iltimos sinfingizni tanlang</i>",parse_mode='HTML')
+        await callback_query.message.edit_text(reply_markup=grades_button(int(data[1])),
+                                               text="<i>Iltimos sinfingizni tanlang</i>", parse_mode='HTML')
         return
+
 
 @dp.message(F.text == "/school")
 async def school(message: Message, state: FSMContext):
@@ -395,7 +444,7 @@ async def get_asdasdas(message: Message):
     bot_data = await bot.get_me()
     for i in schools:
         text += f"Id: {i.id}\nNumber: {i.school_number}\nPlace: {i.place}\nURL: https://t.me/{bot_data.username}?start={i.school_url} \nExpire_at: {i.expire_at}\n\n"
-    await message.answer(f"<b>{text}</b>",)
+    await message.answer(f"<b>{text}</b>", )
     return
 
 
@@ -457,9 +506,9 @@ async def password(message: Message, state: FSMContext):
         await message.answer(f"'{login1}' uchun parolni 🔑 kiriting:")
         return
     await message.reply(f"Login: {login1}\n Password: {password}\n kirilyapti iltimos kuting....",
-                              reply_markup=reply_keyboard_remove.ReplyKeyboardRemove())
+                        reply_markup=reply_keyboard_remove.ReplyKeyboardRemove())
     login = {'1': {'username': login1, 'password': password, 'last_login': False, 'last_cookie': '',
-                   "tg_id": message.from_user.id, 'login_id': False,"grade":user.grade}}
+                   "tg_id": message.from_user.id, 'login_id': False, "grade": user.grade}}
     response = await send_request_main(login)
     print(response)
     bot_username = await bot.get_me()
@@ -472,27 +521,25 @@ async def password(message: Message, state: FSMContext):
             a = True
             captcha = user.captcha_for_bot
             asa = await message.answer(text='Login kira olamdi shu sabab shu web tugmasini bosib osha joyda kiring',
-                             reply_markup=InlineKeyboardMarkup(
-                                 inline_keyboard=[[InlineKeyboardButton(text='Web', web_app=WebAppInfo(
-                                     url=f"{url}?username={login1}&password={password}&tg_id={message.from_user.id}&captcha={captcha}")),
-                                                   InlineKeyboardButton(text='Bekor qilish',
-                                                                        url=f'https://t.me/{bot_username.username}?start=clear')]]))
+                                       reply_markup=InlineKeyboardMarkup(
+                                           inline_keyboard=[[InlineKeyboardButton(text='Web', web_app=WebAppInfo(
+                                               url=f"{url}?username={login1}&password={password}&tg_id={message.from_user.id}&captcha={captcha}")),
+                                                             InlineKeyboardButton(text='Bekor qilish',
+                                                                                  url=f'https://t.me/{bot_username.username}?start=clear')]]))
     if response["1"]['last_login']:
         if a:
             await asa.edit_text(f"{login1} saqlandi va muaffaiyatli kirildi 🎉")
         else:
             await message.answer(f"{login1} saqlandi va muaffaiyatli kirildi 🎉")
         await create_login(password=password, username=login1, cookie=response["1"]['last_cookie'], last_login=True,
-                           school_number_id=school_id,grade=user.grade)
+                           school_number_id=school_id, grade=user.grade)
     await state.set_state(Next.login)
     return
 
 
-
-
-async def log_in(message,login1,password,school_id,captcha,grade):
+async def log_in(message, login1, password, school_id, captcha, grade):
     abad = await message.reply(f"Login: {login1}\n Password: {password}\n kirilyapti iltimos kuting....",
-                        reply_markup=reply_keyboard_remove.ReplyKeyboardRemove())
+                               reply_markup=reply_keyboard_remove.ReplyKeyboardRemove())
     login = {'1': {'username': login1, 'password': password, 'last_login': False, 'last_cookie': '',
                    "tg_id": message.from_user.id, 'login_id': False}}
     response = await  send_request_main(login)
@@ -504,16 +551,17 @@ async def log_in(message,login1,password,school_id,captcha,grade):
             response = await  send_request_main(login)
             a = False
         await message.reply(text=f'Login:{login1} kira olamdi shu sabab shu web tugmasini bosib osha joyda kiring',
-                                   reply_markup=InlineKeyboardMarkup(
-                                       inline_keyboard=[[InlineKeyboardButton(text='Web', web_app=WebAppInfo(
-                                           url=f"{url}?username={login1}&password={password}&tg_id={message.from_user.id}&captcha={captcha}")),
-                                                         InlineKeyboardButton(text='Bekor qilish',
-                                                                              url=f'https://t.me/{bot_username.username}?start=clear')]]))
+                            reply_markup=InlineKeyboardMarkup(
+                                inline_keyboard=[[InlineKeyboardButton(text='Web', web_app=WebAppInfo(
+                                    url=f"{url}?username={login1}&password={password}&tg_id={message.from_user.id}&captcha={captcha}")),
+                                                  InlineKeyboardButton(text='Bekor qilish',
+                                                                       url=f'https://t.me/{bot_username.username}?start=clear')]]))
     if response["1"]['last_login']:
         await message.answer(f"{login1} saqlandi va muaffaiyatli kirildi 🎉")
         await create_login(password=password, username=login1, cookie=response["1"]['last_cookie'], last_login=True,
-                           school_number_id=school_id,grade=grade)
+                           school_number_id=school_id, grade=grade)
     return
+
 
 @dp.message(F.text.startswith("add"))
 async def password(message: Message, state: FSMContext):
@@ -525,7 +573,6 @@ async def password(message: Message, state: FSMContext):
     user = await create_user(message.from_user.id)
     school_id = user.school_id
 
-
     # split by comma and clean spaces
     logins = [item.strip() for item in n_message.split(",") if item.strip()]
 
@@ -533,14 +580,12 @@ async def password(message: Message, state: FSMContext):
     for item in logins:
         try:
             login, pwd = item.split(":", 1)
-            tasks.append(log_in(message, login, pwd, school_id, await give_captcha_100(30),grade=user.grade))
+            tasks.append(log_in(message, login, pwd, school_id, await give_captcha_100(30), grade=user.grade))
         except ValueError:
             pass
     await asyncio.gather(*tasks, return_exceptions=True)
 
     return
-
-
 
 
 async def login_schedule(user: int | None = None):
@@ -623,10 +668,10 @@ async def login_schedule(user: int | None = None):
 
         # If user is not admin — send only their own class info
         else:
-            print(grouped,user_obj.school_id,user_obj.grade)
+            print(grouped, user_obj.school_id, user_obj.grade)
             key = (int(user_obj.school_id), str(user_obj.grade).strip())
             send_message = grouped.get(key)
-            print("_"*80,send_message)
+            print("_" * 80, send_message)
             if not send_message:
                 print("⚠️ No logins found for:", key)
                 return
@@ -636,7 +681,6 @@ async def login_schedule(user: int | None = None):
             print("DEBUG:", user_obj.school_id, user_obj.grade, grouped.keys())
             s = sum(1 for d in send_message.values() if d.get("last_login"))
             f = sum(1 for d in send_message.values() if not d.get("last_login"))
-
 
             text = (
                 f"🏫 Maktab raqami: {(await get_school_number(id=user_obj.school_id)).school_number}\n | Sinfi: {(await get_grade(id=user_obj.grade)).grade}\n"
@@ -648,7 +692,6 @@ async def login_schedule(user: int | None = None):
             )
 
             await bot.send_message(chat_id=user_obj.tg_id, text=text, parse_mode="HTML")
-
 
     # Run sending in parallel (safe batch of 10)
     BATCH_SIZE = 10
@@ -663,8 +706,6 @@ async def all_logins(message: Message):
     await message.answer('Login progress just started')
     await login_schedule(False)
     return
-
-
 
 
 def split_text(text, chunk_size=4000):
@@ -714,10 +755,10 @@ async def give_a_role(message: Message):
         await message.reply("Invalid command format. Use: />:)_<tg_id>:<role>")
         return
 
-    send_users = [message.from_user.id,tg_id]
+    send_users = [message.from_user.id, tg_id]
 
     tasks = []
-    await create_or_change_user_role(tg_id,role)
+    await create_or_change_user_role(tg_id, role)
     for user_id in send_users:
         base_text = f" {tg_id} ⭐ promoted to 👑 {role.capitalize()} by @{message.from_user.username} 🎉"
         final_text = (
@@ -739,7 +780,7 @@ async def send_json():
         cat = FSInputFile("database.json")
         users = await get_all_users()
         for user in users:
-            if user.role=='owner':
+            if user.role == 'owner':
                 await bot.send_document(chat_id=user.tg_id, document=cat)
         await asyncio.sleep(3600 * 24)
 
