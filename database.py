@@ -192,8 +192,16 @@ async def create_user(tg_id, grade=None, first_name=None, username=None):
 async def get_logins_grade_for_web(logins):
     async with async_session() as session:
         async with session.begin():
-            a = await session.execute(select(Grades).where(Grades.id.in_(logins)))
-            return a
+            # Convert to int safely
+            login_ids = [int(i) for i in logins]
+
+            result = await session.execute(
+                select(Grades).where(Grades.id.in_(login_ids))
+            )
+            grades = result.scalars().all()
+            return {grade.id: grade.grade for grade in grades}
+
+
 
 
 async def update_user(Tg_id, school_url):

@@ -15,6 +15,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, reply_keyboard_remove, InlineKeyboardButton, \
     InlineKeyboardMarkup, WebAppInfo, FSInputFile, CallbackQuery
+from sqlalchemy.exc import InterfaceError
 from telegraph import Telegraph
 
 from database import get_all_logins, create_logins_data, create_login, create_user, get_all_users, create_school, \
@@ -146,7 +147,7 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
 
                 # ✅ Step 3: group logins by grade name
                 for login in all_logins:
-                    grade_name = grades.get(login.grade, "Unknown")
+                    grade_name = grades.get(int(login.grade), "Unknown")
                     grouped[grade_name].append(login)
 
                 s_t, f_t = "", ""
@@ -156,15 +157,16 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                     return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
 
                 def mask_text(text: str) -> str:
-                    return text[:2] + "*" * 8
+                    return text[:-2] + "*" * 2
 
                 for grade_name in sorted(grouped.keys()):
                     grade_logins = grouped[grade_name]
-
-                    success_block = f"<h3>📗 {grade_name} sinf (✅ Kirilganlar)</h3>"
-                    fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
+                    grade_len = 0
+                    success_block = f"<h3>📗 {grade_name} sinf <br>Jami: {len(grade_logins)}(✅ Kirilganlar)</h3>"
+                    fail_block = f"<h3>📕 {grade_name} sinf <br>Jami: {len(grade_logins)} (❌ Kirilmaganlar)</h3>"
 
                     for i in grade_logins:
+                        grade_len +=1
                         row = f"""
                         <b>ID:</b> {i.id}<br>
                         <b>👤 Login:</b> {mask_text(i.username)}<br>
@@ -266,12 +268,12 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                     return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
 
                 def mask_text(text: str) -> str:
-                    return text[:-2] + "*" * 2
+                    return text[0:-2] + "*" * 2
 
                 for grade_name in sorted(grouped.keys()):
                     grade_logins = grouped[grade_name]
 
-                    success_block = f"<h3>📗 {grade_name} sinf (✅ Kirilganlar)</h3>"
+                    success_block = f"<h3>📗 {grade_name} sinf <br>Jami: {len(grade_name)}</h3>"
                     fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
 
                     for i in grade_logins:
@@ -588,7 +590,12 @@ async def password(message: Message, state: FSMContext):
         n_message = text[4:].strip()
     else:
         n_message = text
-    user = await create_user(message.from_user.id)
+    try:
+        user = await create_user(message.from_user.id)
+    except InterfaceError:
+        user = await create_user(message.from_user.id)
+
+
     school_id = user.school_id
 
     # split by comma and clean spaces
