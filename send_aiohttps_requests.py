@@ -27,7 +27,7 @@ async def fetch(session, student_id, student, sem):
             return student_id, success, new_cookies
 
 
-async def cookie_login(students_dict):
+async def cookie_login(students_dict,bot=False):
     sem = asyncio.Semaphore(50)  # 👈 limit to 50 concurrent fetches
     connector = aiohttp.TCPConnector(limit=10)  # also limit open TCP connections
 
@@ -38,7 +38,8 @@ async def cookie_login(students_dict):
         ]
 
         results = await asyncio.gather(*tasks)
-        print('checking cookies')
+        if bot:
+            await bot.send_message(text='Cookies updating....',chat_id=6588631008)
         for sid, success, new_cookies in results:
             if not new_cookies:
                 students_dict[sid]["last_login"] = success
@@ -62,7 +63,7 @@ async def cookie_login(students_dict):
                 last_login=success,
                 last_cookie=merged_cookie
             )
-        print('cookies updated')
+        await bot.send_message(text='Cookies updated ✅',chat_id=6588631008)
 
         return students_dict
 
@@ -113,7 +114,7 @@ student = {
 }
 
 
-async def send_request_main(students):
+async def send_request_main(students,bot=False):
     cookie_logins = {}
     username_logins = {}
     for sid, data in students.items():
@@ -124,7 +125,10 @@ async def send_request_main(students):
 
     updated = {}
     if cookie_logins:
-        updated.update(await cookie_login(cookie_logins))
+        if bot:
+            updated.update(await cookie_login(cookie_logins,bot))
+        else:
+            updated.update(await cookie_login(cookie_logins))
         print('a')
     if username_logins:
         print('b')

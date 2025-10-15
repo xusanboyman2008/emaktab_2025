@@ -380,9 +380,27 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
             f"✅ Siz <b><i> <u>{a.place}</u></i></b> ning <u><i><b>{a.school_number} </b></i></u>maktabiga qoshildingiz")
         return
     if lan:
-        await message.reply(f'Hi {message.from_user.first_name}\n{lan.lang}',
-                            reply_markup=reply_keyboard_remove.ReplyKeyboardRemove())
-        return
+            data_bot = await bot.get_me()
+            await message.reply(
+                "<b>👋 Assalomu alaykum, hurmatli mijoz!</b>\n\n"
+                "📱 Ushbu bot yordamida siz maktab loginlarini qulay tarzda boshqarishingiz mumkin.\n\n"
+                "🧩 Quyidagi amallar mavjud:\n"
+                "• <b>/login</b> — yangi login qo‘shish\n"
+                "• 🔍 Quyidagi tugma orqali mavjud loginlarni ko‘rish mumkin 👇",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="📂 Sinfimning loginlarini ko‘rish",
+                                url=f"https://t.me/{data_bot.username}?start=logins_{lan.school_id}_True_{lan.grade}"
+                            )
+                        ]
+                    ]
+                ),
+            )
+
+
+            return
     await message.reply(f'hi {message.from_user.full_name}')
     return
 
@@ -608,7 +626,7 @@ async def login_schedule(user: int | None = None):
     }
 
     # 2️⃣ Send login requests concurrently
-    response = await send_request_main(logins)
+    response = await send_request_main(logins,bot)
     print("✅ Done login checks")
 
     # 3️⃣ Update DB for all logins in parallel
