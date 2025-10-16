@@ -273,8 +273,8 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                 for grade_name in sorted(grouped.keys()):
                     grade_logins = grouped[grade_name]
 
-                    success_block = f"<h3>📗 {grade_name} sinf <br>Jami: {len(grade_name)}</h3>"
-                    fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
+                    success_block = f"<h3>📗 {grade_name} sinf <br>Jami: {len(grade_logins)}</h3>"
+                    fail_block = f"<h3>📕 {grade_name} sinf <br>Jami: {len(grade_logins)}(❌ Kirilmaganlar)</h3>"
 
                     for i in grade_logins:
                         row = f"""
