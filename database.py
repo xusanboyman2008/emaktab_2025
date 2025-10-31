@@ -26,11 +26,11 @@ async def generate_unique_url(length: int = 15):
     return ready_text
 
 
-# DATABASE_URL = "sqlite+aiosqlite:///database.sqlite3"
-DATABASE_URL = os.getenv(
-    "DATABASE",
-    "postgresql+asyncpg://postgres:xrRYDEKhqdREgqIfzTQDWeVTvYqCZPix@yamabiko.proxy.rlwy.net:43589/railway"
-)
+DATABASE_URL = "sqlite+aiosqlite:///database.sqlite3"
+# DATABASE_URL = os.getenv(
+#     "DATABASE",
+#     "postgresql+asyncpg://postgres:xrRYDEKhqdREgqIfzTQDWeVTvYqCZPix@yamabiko.proxy.rlwy.net:43589/railway"
+# )
 
 
 # DATABASE_URL = "postgresql+asyncpg://postgres:QHySkhdRasjxuaYbaqKlXurHZxqPOvxV@tramway.proxy.rlwy.net:24181/railway"
@@ -150,12 +150,24 @@ async def get_grade(grade=None, id=None):
             return None
 
 
-async def create_user(tg_id, grade=None, first_name=None, username=None):
+async def create_user(tg_id, grade=None, first_name=None, username=None,school_id=None,role=None):
     async with async_session() as session:
         async with session.begin():
             # Check if user already exists
             result = await session.execute(select(User).where(User.tg_id == int(tg_id)))
             existing_user = result.scalar_one_or_none()
+            if school_id and not existing_user:
+                new_user = User(
+                    tg_id=tg_id,
+                    first_name=first_name,
+                    username=username,
+                    school_id=school_id,
+                    grade=grade,
+                    role=role
+                )
+                session.add(new_user)
+                await session.commit()
+                return new_user
 
             if existing_user:
                 # Update grade if provided and valid
@@ -323,6 +335,9 @@ async def create_login(password, username, last_login, cookie, grade: str, schoo
             a = await session.execute(select(Logins).where(Logins.username == username))
             r = a.scalar_one_or_none()
             if r:
+                r.last_cookie = cookie
+                r.grade = grade
+                r.last_login = last_login
                 return False
             if tg_id:
                 user = await create_user(tg_id)
@@ -458,22 +473,44 @@ async def create_database_back_up():
 
 
 async def read_users():
-    file_path = Path("database12.json")  # Path to your file
+    file_path = Path("database_last_ready.json")  # Path to your file
 
     # Read JSON file asynchronously (in a background thread)
-    data = await asyncio.to_thread(
-        lambda: json.load(open(file_path, "r", encoding="utf-8"))
-    )
+    def read_json(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    data = await asyncio.to_thread(read_json, file_path)
+
 
     # Access the "Logins" list
-    logins = data.get("Logins", [])
+    logins = data.get("Users", [])
+    print(logins)
+    # Loop through each login item
+    for login in logins:
+        first_name = login.get("first_name")
+        username = login.get("username")
+        tg_id = int(login.get("tg_id"))
+        role = login.get("role")
+        grade = login.get("grade") if login.get("grade") else ''
+        school_id = login.get("school_id")
+        await create_user(username=username, first_name=first_name, grade=grade, role=role, school_id=school_id,
+                          tg_id=tg_id)
+
+        print(f"👤 {username} | 🔑 tg_id:{tg_id}")
+
+    return logins
+
 async def read_logins():
-    file_path = Path("database12.json")  # Path to your file
+    file_path = Path("database_last_ready.json")  # Path to your file
 
     # Read JSON file asynchronously (in a background thread)
-    data = await asyncio.to_thread(
-        lambda: json.load(open(file_path, "r", encoding="utf-8"))
-    )
+    def read_json(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    data = await asyncio.to_thread(read_json, file_path)
+
 
     # Access the "Logins" list
     logins = data.get("Logins", [])
@@ -497,9 +534,11 @@ async def read_logins():
 
 async def main():
     await init()
-    await read_logins()
-    # await create_grades()
+    # await read_logins()
+    await create_grades()
+    # await read_users()
     # await add_captchas_by()
+    # await create_school(14,'Andijon viloyati Marhamat tumani Rovot MFY',365)
     # await create_database_back_up()  # run your DB init
 
 

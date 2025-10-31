@@ -6,7 +6,7 @@ from io import BytesIO
 def get_captcha_code(captcha_id: str):
     try:
         url = f"https://login.emaktab.uz/captcha/true/{captcha_id}"
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=3)
         response.raise_for_status()
 
         img = Image.open(BytesIO(response.content))

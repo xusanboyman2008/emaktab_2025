@@ -33,7 +33,7 @@ telegraph.create_account(short_name="xusanboy")
 # url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev'
 url = os.getenv('URL', "https://emaktab-2025.onrender.com/")
 # Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
-Token = os.getenv('TOKEN', "7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M")
+Token = os.getenv('TOKEN', "8301189313:AAEePiO5uaAMA01sbQLOts6TguUaztlbNaw")
 bot = Bot(token=Token, default=DefaultBotProperties(
     parse_mode=ParseMode.HTML
 ))
@@ -102,6 +102,119 @@ def grades_button(current_page: int):
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+async def create_school_login_report(user, school_number, school_id, all_logins, grades):
+    """
+    Create Telegraph report pages for school login statistics.
+    Splits large pages into chunks to avoid CONTENT_TOO_BIG.
+    """
+
+    def chunk_list(data, size):
+        for i in range(0, len(data), size):
+            yield data[i:i + size]
+
+    def format_time(dt):
+        return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
+
+    def mask_text(text: str) -> str:
+        return text[:-2] + "*" * 2
+
+    grouped = defaultdict(list)
+
+    # Group logins by grade
+    for login in all_logins:
+        if isinstance(grades, dict):
+            grade_name = grades.get(int(login.grade), "Unknown")
+        else:
+            grade_name = getattr(grades, "grade", "Unknown")
+        grouped[grade_name].append(login)
+
+    s_t, f_t = "", ""
+    s, f = 0, 0
+
+    for grade_name in sorted(grouped.keys()):
+        grade_logins = grouped[grade_name]
+        success_block = f"<h3>📗 {grade_name} sinf (✅ Kirilganlar)</h3>"
+        fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
+
+        for index,i in enumerate(grade_logins):
+            row = f"""
+            {f'<b>Uniq_ID</b> {index+1}<br><b>ID:</b> {index}<br>' if user.role=='owner' else
+            f'<b>ID:</b> {index+1}<br>'}
+            <b>👤 Login:</b> {mask_text(i.username)}<br>
+            <b>🔑 Parol:</b> {mask_text(i.password)}<br>
+            <b>📌 Holat:</b> {'✅ Kirilgan' if i.last_login else '❌ Kirilmagan'}<br>
+            <b>⏰ So‘nggi kirish:</b> {format_time(i.updated_at)}<br>
+            <hr>
+            """
+            if i.last_login:
+                s += 1
+                success_block += row
+            else:
+                f += 1
+                fail_block += row
+
+        s_t += success_block
+        f_t += fail_block
+
+    total = s + f
+    stats_html = f"""
+    <h3>{school_number.school_number}-maktab 📊 Umumiy statistika</h3>
+    <b>👥 Jami loginlar:</b> {total}<br>
+    <b>✅ Kirilgan:</b> {s}<br>
+    <b>❌ Kirilmagan:</b> {f}<br>
+    <b>📈 Muvaffaqiyat foizi:</b> {round((s / total * 100), 1) if total else 0}%<br><br>
+    <a href="{{success_url}}">✅ Kirilgan loginlarni ko‘rish</a><br>
+    <a href="{{fail_url}}">❌ Kirilmagan loginlarni ko‘rish</a>
+    """
+
+    # Temporary page
+    stats_page = await to_thread(
+        telegraph.create_page,
+        title="Loginlar statistikasi",
+        html_content=stats_html.replace("{success_url}", "#").replace("{fail_url}", "#")
+    )
+    stats_url = stats_page["url"]
+
+    # Split large success/fail pages into chunks
+    async def create_split_pages(prefix, html_text, icon):
+        pages = []
+        parts = list(chunk_list(html_text.split("<hr>"), 80))  # 80 rows per page
+        for idx, chunk in enumerate(parts):
+            page_html = f"<h3>{icon} {prefix} (sahifa {idx+1})</h3>" + "<hr>".join(chunk)
+            page = await to_thread(
+                telegraph.create_page,
+                title=f"{school_number.school_number}-maktab {prefix} ({idx+1})",
+                html_content=page_html
+            )
+            pages.append(page["url"])
+        # Combine small page links
+        return "<br>".join(f"<a href='{url}'>{prefix} – sahifa {i+1}</a>" for i, url in enumerate(pages))
+
+    success_pages_html = await create_split_pages("✅ Kirilganlar", s_t, "✅")
+    fail_pages_html = await create_split_pages("❌ Kirilmaganlar", f_t, "❌")
+
+    success_page = await to_thread(
+        telegraph.create_page,
+        title=f"{school_number.school_number}-maktab ✅ Kirilganlar",
+        html_content=f"<h3>✅ Kirilgan loginlar</h3>{success_pages_html}<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+    )
+    fail_page = await to_thread(
+        telegraph.create_page,
+        title=f"{school_number.school_number}-maktab ❌ Kirilmaganlar",
+        html_content=f"<h3>❌ Kirilmagan loginlar</h3>{fail_pages_html}<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+    )
+
+    # Update stats page with working links
+    final_stats_html = stats_html.replace("{success_url}", success_page["url"]).replace("{fail_url}", fail_page["url"])
+    await to_thread(
+        telegraph.edit_page,
+        path=stats_page["path"],
+        title=f"{school_number.school_number}-maktab statistikasi",
+        html_content=final_stats_html
+    )
+
+    return stats_url
+
 
 @dp.message(CommandStart())
 async def start(message: Message, command: CommandStart, state: FSMContext):
@@ -163,7 +276,7 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                     grade_logins = grouped[grade_name]
                     grade_len = 0
                     success_block = f"<h3>📗 {grade_name} sinf <br>Jami: {len(grade_logins)}(✅ Kirilganlar)</h3>"
-                    fail_block = f"<h3>📕 {grade_name} sinf <br>Jami: {len(grade_logins)} (❌ Kirilmaganlar)</h3>"
+                    fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
 
                     for i in grade_logins:
                         grade_len +=1
@@ -186,51 +299,13 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                     f_t += fail_block
 
                 total = s + f
-                stats_html = f"""
-                <h3>{school_number.school_number}-maktab 📊 Umumiy statistika</h3>
-                <b>👥 Jami loginlar:</b> {total}<br>
-                <b>✅ Kirilgan:</b> {s}<br>
-                <b>❌ Kirilmagan:</b> {f}<br>
-                <b>📈 Muvaffaqiyat foizi:</b> {round((s / total * 100), 1) if total else 0}%<br><br>
-                <a href="{{success_url}}">✅ Kirilgan loginlarni ko‘rish</a><br>
-                <a href="{{fail_url}}">❌ Kirilmagan loginlarni ko‘rish</a>
-                """
 
-                # Create temporary page
-                stats_page = await to_thread(
-                    telegraph.create_page,
-                    title="Loginlar statistikasi",
-                    html_content=stats_html.replace("{success_url}", "#").replace("{fail_url}", "#")
-                )
-                stats_url = stats_page["url"]
-
-                # Create detailed pages
-                success_html = f"<h3>✅ Kirilgan loginlar ({s} ta)</h3>" + (
-                            s_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
-                fail_html = f"<h3>❌ Kirilmagan loginlar ({f} ta)</h3>" + (
-                            f_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
-
-                success_page = await to_thread(
-                    telegraph.create_page,
-                    title=f"{school_number.school_number}-maktab ✅ Kirilganlar",
-                    html_content=success_html
-                )
-                success_url = success_page["url"]
-
-                fail_page = await to_thread(
-                    telegraph.create_page,
-                    title=f"{school_number.school_number}-maktab ❌ Kirilmaganlar",
-                    html_content=fail_html
-                )
-                fail_url = fail_page["url"]
-
-                # Update main stats with working URLs
-                final_stats_html = stats_html.replace("{success_url}", success_url).replace("{fail_url}", fail_url)
-                await to_thread(
-                    telegraph.edit_page,
-                    path=stats_page["path"],
-                    title=f"{school_number.school_number}-maktab statistikasi",
-                    html_content=final_stats_html
+                stats_url = await create_school_login_report(
+                    user=user,
+                    school_number=school_number,
+                    school_id=school_id,
+                    all_logins=all_logins,
+                    grades=grades
                 )
 
                 await msg.edit_text(
@@ -253,98 +328,18 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
                 # ✅ Step 2: fetch all grades in one query
                 grades = await get_grade(id=grade_ids[0])
 
-                # ✅ Step 3: group logins by grade name
-                if not all_logins:
-                    await msg.edit_text('Loginlar mavjud emas /start')
-                    return
-                for login in all_logins:
-                    grade_name = grades.grade
-                    grouped[grade_name].append(login)
 
-                s_t, f_t = "", ""
-                s, f = 0, 0
 
-                def format_time(dt):
-                    return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
-
-                def mask_text(text: str) -> str:
-                    return text[0:-2] + "*" * 2
-
-                for grade_name in sorted(grouped.keys()):
-                    grade_logins = grouped[grade_name]
-
-                    success_block = f"<h3>📗 {grade_name} sinf <br>Jami: {len(grade_logins)}</h3>"
-                    fail_block = f"<h3>📕 {grade_name} sinf <br>Jami: {len(grade_logins)}(❌ Kirilmaganlar)</h3>"
-
-                    for i in grade_logins:
-                        row = f"""
-                        <b>ID:</b> {i.id}<br>
-                        <b>👤 Login:</b> {mask_text(i.username)}<br>
-                        <b>🔑 Parol:</b> {mask_text(i.password)}<br>
-                        <b>📌 Holat:</b> {'✅ Kirilgan' if i.last_login else '❌ Kirilmagan'}<br>
-                        <b>⏰ So‘nggi kirish:</b> {format_time(i.updated_at)}<br>
-                        <hr>
-                        """
-                        if i.last_login:
-                            s += 1
-                            success_block += row
-                        else:
-                            f += 1
-                            fail_block += row
-
-                    s_t += success_block
-                    f_t += fail_block
-
-                total = s + f
-                stats_html = f"""
-                <h3>{school_number.school_number}-maktab {grades.grade}-sinf <br> 📊 Umumiy statistika</h3>
-                <b>👥 Jami loginlar:</b> {total}<br>
-                <b>✅ Kirilgan:</b> {s}<br>
-                <b>❌ Kirilmagan:</b> {f}<br>
-                <b>📈 Muvaffaqiyat foizi:</b> {round((s / total * 100), 1) if total else 0}%<br><br>
-                <a href="{{success_url}}">✅ Kirilgan loginlarni ko‘rish</a><br>
-                <a href="{{fail_url}}">❌ Kirilmagan loginlarni ko‘rish</a>
-                """
-
-                # Create temporary page
-                stats_page = await to_thread(
-                    telegraph.create_page,
-                    title="Loginlar statistikasi",
-                    html_content=stats_html.replace("{success_url}", "#").replace("{fail_url}", "#")
-                )
-                stats_url = stats_page["url"]
-
-                # Create detailed pages
-                success_html = f"<h3>✅ Kirilgan loginlar ({s} ta)</h3>" + (
-                            s_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
-                fail_html = f"<h3>❌ Kirilmagan loginlar ({f} ta)</h3>" + (
-                            f_t or "—") + f"<br><a href='{stats_url}'>⬅️ Orqaga</a>"
-
-                success_page = await to_thread(
-                    telegraph.create_page,
-                    title=f"{school_number.school_number}-maktab ✅ Kirilganlar",
-                    html_content=success_html
-                )
-                success_url = success_page["url"]
-
-                fail_page = await to_thread(
-                    telegraph.create_page,
-                    title=f"{school_number.school_number}-maktab ❌ Kirilmaganlar",
-                    html_content=fail_html
-                )
-                fail_url = fail_page["url"]
-
-                # Update main stats with working URLs
-                final_stats_html = stats_html.replace("{success_url}", success_url).replace("{fail_url}", fail_url)
-                await to_thread(
-                    telegraph.edit_page,
-                    path=stats_page["path"],
-                    title=f"{school_number.school_number}-maktab statistikasi",
-                    html_content=final_stats_html
+                stats_url = await create_school_login_report(
+                    user=user,
+                    school_number=school_number,
+                    school_id=school_id,
+                    all_logins=all_logins,
+                    grades=grades
                 )
 
                 await msg.edit_text(
-                    f'<a href="{stats_url}">📖 {school_number.school_number}-maktab {grades.grade}-Sinf loginlari</a>',
+                    f'<a href="{stats_url}">📖 {school_number.school_number}-maktab loginlari</a>',
                     parse_mode="HTML",
                     protect_content=True
                 )
@@ -656,6 +651,7 @@ async def login_schedule(user: int | None = None):
 
     # 5️⃣ Bot info for links
     bot_data = await bot.get_me()
+    bot_data = await bot.get_me()
 
     # 7️⃣ Otherwise — automatic scheduled sending to all users
     users = await get_all_users()
@@ -691,7 +687,7 @@ async def login_schedule(user: int | None = None):
 
             await bot.send_message(chat_id=user_obj.tg_id, text=text, parse_mode="HTML")
 
-        # If user is not admin — send only their own class info
+        #If user is not admin — send only their own class info
         else:
             print(grouped, user_obj.school_id, user_obj.grade)
             key = (int(user_obj.school_id), str(user_obj.grade).strip())

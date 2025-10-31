@@ -1,50 +1,52 @@
+import aiohttp
 import asyncio
 from http.cookies import SimpleCookie
-
-import aiohttp
-
+from database import update_logins, give_captcha_100
 from login_by_username import login_by_user
-from database import add_captcha_id, get_free_captcha, create_user
-from database import update_logins
-from database import create_login
 
-url = "https://emaktab.uz/userfeed/"
+url = "https://login.emaktab.uz"
 
 
 async def fetch(session, student_id, student, sem):
     headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Cookie": student["last_cookie"],
+        "Host": "login.emaktab.uz",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
+        "Sec-GPC": "1",
+        "Connection": "keep-alive",
+        "Cookie": student.get("last_cookie",''),
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Priority": "u=0, i"
     }
 
-    async with sem:  # limit concurrency to 50
-        async with session.get(url, headers=headers) as response:
+
+    async with sem:
+        async with session.get(url, headers=headers, allow_redirects=False) as response:
             all_cookies = session.cookie_jar.filter_cookies(url)
             new_cookies = [f"{k}={v.value}" for k, v in all_cookies.items()]
 
-            print(len(new_cookies), student_id)
-            success = True if len(new_cookies) > 3 else False
+            has_auth = any("UZDnevnikAuth_a" in kv for kv in new_cookies)
+            success = True if has_auth else False
+
             return student_id, success, new_cookies
 
 
-async def cookie_login(students_dict,bot=False):
-    sem = asyncio.Semaphore(50)  # 👈 limit to 50 concurrent fetches
-    connector = aiohttp.TCPConnector(limit=10)  # also limit open TCP connections
+async def cookie_login(students_dict, bot=False):
+    sem = asyncio.Semaphore(50)
+    connector = aiohttp.TCPConnector(limit=100)
+    timeout = aiohttp.ClientTimeout(total=30)
 
-    async with aiohttp.ClientSession(connector=connector) as session:
-        tasks = [
-            fetch(session, sid, s, sem)
-            for sid, s in students_dict.items()
-        ]
-
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        tasks = [fetch(session, sid, s, sem) for sid, s in students_dict.items()]
         results = await asyncio.gather(*tasks)
-        if bot:
-            await bot.send_message(text='Cookies updating....',chat_id=6588631008)
-        for sid, success, new_cookies in results:
-            if not new_cookies:
-                students_dict[sid]["last_login"] = success
-                continue
 
+        for sid, success, new_cookies in results:
             old_cookie = students_dict[sid].get("last_cookie", "")
             cookie = SimpleCookie()
             cookie.load(old_cookie)
@@ -58,85 +60,133 @@ async def cookie_login(students_dict,bot=False):
             merged_cookie = "; ".join([f"{k}={v.value}" for k, v in cookie.items()])
             students_dict[sid]["last_cookie"] = merged_cookie
             students_dict[sid]["last_login"] = success
-            await update_logins(
-                login_id=students_dict[sid]["login_id"],
-                last_login=success,
-                last_cookie=merged_cookie
-            )
-        await bot.send_message(text='Cookies updated ✅',chat_id=6588631008)
 
-        return students_dict
+            # ✅ If cookie expired, immediately relogin
+            if not success:
+                print(f"⚠️ [{sid}] Cookie expired. Retrying with username login...")
+                username = students_dict[sid]["username"]
+                password = students_dict[sid]["password"]
+                captcha_id = await give_captcha_100(students_dict[sid].get('login_id'))
+
+                login, new_cookie = await login_by_user(
+                    username, password, use_captcha=True, captcha_id=captcha_id
+                )
+
+                if login >= 4 and "UZDnevnikAuth_a" in new_cookie:
+                    print(f"✅ [{sid}] Auto-refreshed cookie successfully")
+                    students_dict[sid]["last_login"] = True
+                    students_dict[sid]["last_cookie"] = new_cookie
+                    await update_logins(
+                        login_id=students_dict[sid]["login_id"],
+                        last_login=True,
+                        last_cookie=new_cookie
+                    )
+                else:
+                    print(f"❌ [{sid}] Failed to auto-refresh cookie.")
+
+            else:
+                await update_logins(
+                    login_id=students_dict[sid]["login_id"],
+                    last_login=True,
+                    last_cookie=merged_cookie
+                )
+
+        if bot:
+            await bot.send_message(text="Cookies updated ✅", chat_id=6588631008)
+
+    return students_dict
 
 
 async def username_login(students_dict):
     for sid, data in students_dict.items():
-        print(f"[{sid}] Logging in {data.get('username')}:{data.get('password')}")
-
         username = data.get("username")
         password = data.get("password")
-        tg_id = data.get("tg_id")
-        login, cookie = await login_by_user(username, password)
+        tg_id = data.get("tg_id", 6588631008)
 
-        # Retry once if login fails
-        if login != 4:
-            user = await create_user(tg_id if tg_id else 6588631008)
-            captcha = user.captcha_for_web
-            if not user.captcha_for_web:
-                captcha=await add_captcha_id(await get_free_captcha(),tg_id=tg_id,is_bot=False)
-            login, cookie = await login_by_user(username, password,use_captcha=captcha)
+        print(f"[{sid}] Trying username login: {username}:{password}")
 
-        last_login = (login == 4)
-        new_cookie = cookie if last_login else data.get("last_cookie")
-        students_dict[sid]["last_login"] = last_login
-        students_dict[sid]["last_cookie"] = new_cookie
-        if login >=4:
-            if students_dict[sid]['login_id']:
-                await update_logins(login_id=students_dict[sid]["login_id",''],last_login=students_dict[sid]['last_login'],last_cookie=students_dict[sid]["last_cookie"])
-                return students_dict
-            school_number = await create_user(tg_id=tg_id)
-            # await create_login(password=students_dict[sid]['password'],last_login=students_dict[sid]['last_login'],cookie=students_dict[sid]["last_cookie"],username=students_dict[sid]['username'],school_number_id=school_number.school_id,grade=students_dict[sid]['grade'])
-        return students_dict
+        # Retry up to 2 times if failed
+        for attempt in range(2):
+            captcha_id = await give_captcha_100(data.get('login_id'))
+            login, cookie = await login_by_user(username, password,use_captcha=True,captcha_id=captcha_id)
+            print(login)
+            if login >=4 and cookie and "UZDnevnikAuth_a" in cookie:
+                students_dict[sid]["last_login"] = True
+                students_dict[sid]["last_cookie"] = cookie
 
-# Example students
-student = {
-    's1': {
-        "username": "xusanboyabdulxayev",
-        "password": "12345678x",
-        "last_login": True,
-        "last_cookie": 'UZDnevnikAuth_a=0GJ4M2iLIT4Ns6kItRPYSESWOBJr0UywOF5ujFeca4iiWp4onaC27CC9i03FL8%2F7YQXJW4%2FjSUGWR6Z0UlY0HCbFoueZ2zzkOqISmfsnsk8IcLE478bHc5Y9SK9TccUnA6lBEQ%3D%3D; a_r_p_i=13.2; dnevnik_rr=False; sst=93bbdacb-2366-41d0-b8c5-92e56cac11f2%7C13%2F09%2F2025%2016%3A21%3A45; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=aRr37m5bT8jHhzgrIXS47u5XuWLQTmBZC%2BdxWX29OXDY2iXmPGt05tqU2x2lGxZxFGj%2Byn98EvLMv6uYg7eT%2FQ641gr3AEBzMYcaEkAwWyCoy4tJdxSvA9V11Zp24Cu3z%2FDuR7KtjLac7nzkJm0%2FvUAefiP%2BRZlZgjg5YYNb0K%2BfkEOG7ntn9RsK%2FDQpywmepNujwTaaOa5rc%2Fd79QRF6B9Kdy8TMcAD4NyGRlldHgAMCVCzOe8Shn8UOUUSHUSvBJtbV8iHhYBJK%2BbRjEwiDt1dbPIODDWhFuwKvivcZu86IZguUBTKdNx6WPH0L4F5V78xSg%3D%3D'
-    },
-    's2': {
-        "username": "xusanboyabdulxayev",
-        "password": "12345678x",
-        'last_login': True,
-        'last_cookie': 'UZDnevnikAuth_a=0GJ4M2iLIT4Ns6kItRPYSESWOBJr0UywOF5ujFeca4iiWp4onaC27CC9i03FL8%2F7YQXJW4%2FjSUGWR6Z0UlY0HCbFoueZ2zzkOqISmfsnsk8IcLE478bHc5Y9SK9TccUnA6lBEQ%3D%3D; a_r_p_i=13.2; dnevnik_rr=False; sst=93bbdacb-2366-41d0-b8c5-92e56cac11f2%7C13%2F09%2F2025%2016%3A25%3A13; t0=1000006479820; t1=; t2=; UZDnevnikAuth_l=aRr37m5bT8jHhzgrIXS47u5XuWLQTmBZC%2BdxWX29OXDY2iXmPGt05tqU2x2lGxZxFGj%2Byn98EvLMv6uYg7eT%2FQ641gr3AEBzMYcaEkAwWyCoy4tJdxSvA9V11Zp24Cu3z%2FDuR7KtjLac7nzkJm0%2FvUAefiP%2BRZlZgjg5YYNb0K%2BfkEOG7ntn9RsK%2FDQpywmepNujwTaaOa5rc%2Fd79QRF6B9Kdy8TMcAD4NyGRlldHgAMCVCzOe8Shn8UOUUSHUSvBJtbV8iHhYBJK%2BbRjEwiDt1dbPIODDWhFuwKvivcZu86IZguUBTKdNx6WPH0L4F5V78xSg%3D%3D'
-    }
-}
+                if data.get("login_id"):
+                    await update_logins(
+                        login_id=data["login_id"],
+                        last_login=True,
+                        last_cookie=cookie
+                    )
+                print(f"✅ [{sid}] Username login success on attempt {attempt+1}")
+                break  # stop retry loop after success
+            else:
+                print(f"⚠️ [{sid}] Username login failed (attempt {attempt+1})")
+
+                students_dict[sid]["last_login"] = False
+
+                if attempt == 1:  # after 2 attempts
+                    if data.get("login_id"):
+                        await update_logins(
+                            login_id=data["login_id"],
+                            last_login=False,
+                            last_cookie=data.get("last_cookie", "")
+                        )
+
+    return students_dict
 
 
-async def send_request_main(students,bot=False):
+
+async def send_request_main(students, bot=None):
     cookie_logins = {}
     username_logins = {}
+
     for sid, data in students.items():
-        if data['last_cookie']:
+        if data.get("last_cookie"):
             cookie_logins[sid] = data
         else:
             username_logins[sid] = data
 
     updated = {}
+
+    # Step 1: Try cookie login
     if cookie_logins:
-        if bot:
-            updated.update(await cookie_login(cookie_logins,bot))
-        else:
-            updated.update(await cookie_login(cookie_logins))
-        print('a')
+        updated.update(await cookie_login(cookie_logins, bot))
+        print("✅ Cookie login attempt done.")
+
+    # Step 2: For those whose cookie login failed, use username login
+    failed_after_cookie = {
+        sid: data for sid, data in updated.items() if not data.get("last_login")
+    }
+    if failed_after_cookie:
+        print(f"🔁 Retrying {len(failed_after_cookie)} failed users with username login...")
+        updated.update(await username_login(failed_after_cookie))
+
+    # Step 3: Add users who had no cookies at all initially
     if username_logins:
-        print('b')
+        print("➡️ Logging in users with no cookies at all...")
         updated.update(await username_login(username_logins))
 
-    print("✅ Final results ready")
+    print("✅ Final results ready.")
     return updated
 
 
 if __name__ == "__main__":
-    asyncio.run(send_request_main())
+    example_students = {
+        "s1": {
+            "username": "xusanboyabdulxayev",
+            "password": "12345678x",
+            "last_login": True,
+            "last_cookie": "UZDnevnikAuth_a=abc; a_r_p_i=13.2;"
+        },
+        "s2": {
+            "username": "another",
+            "password": "pass",
+            "last_login": False,
+            "last_cookie": ""
+        },
+    }
+
+    asyncio.run(send_request_main(example_students))

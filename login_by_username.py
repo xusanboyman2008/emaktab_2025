@@ -6,9 +6,21 @@ from captcha_code import get_captcha_code  # OCR solver
 async def login_by_user(username, password, captcha_id=None, use_captcha=False,captcha_text=None):
     session = requests.Session()
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Host": "login.emaktab.uz",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
+        "Sec-GPC": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Priority": "u=0, i"
     }
+
 
     if not captcha_id:
         captcha_id = "f61a11f3-1cee-448c-ad2b-fd2eee8f9b2d"
@@ -30,7 +42,7 @@ async def login_by_user(username, password, captcha_id=None, use_captcha=False,c
     }
     print(payload)
     # Send login request
-    r = session.post("https://login.emaktab.uz/login/", headers=headers, data=payload)
+    r = session.post("https://login.emaktab.uz/", headers=headers, data=payload,allow_redirects=False)
 
     # Collect cookies from cookie jar
     cookies = {c.name: c.value for c in session.cookies}
@@ -56,7 +68,7 @@ async def login_by_user(username, password, captcha_id=None, use_captcha=False,c
 
     # Build cookie string in correct format
     cookies_len = len(r.cookies)
-    print(r.cookies)
+    print(r.cookies,cookies_len)
     cookie_string = "; ".join([f"{k}={v}" for k, v in cookies.items()])
     print(cookie_string)
     return cookies_len,cookie_string
