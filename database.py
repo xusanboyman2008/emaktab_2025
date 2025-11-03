@@ -443,7 +443,7 @@ async def create_or_change_user_role(user_tg, role='Admin'):
             return False
 
 
-async def get_all_schools():
+async def get_all_schools(only_exist=False):
     async with async_session() as session:
         async with session.begin():
             a = await session.execute(select(School_number))

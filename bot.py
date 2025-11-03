@@ -102,10 +102,10 @@ def grades_button(current_page: int):
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-async def create_school_login_report(user, school_number, school_id, all_logins, grades):
+async def create_all_schools_report(user, all_schools, all_logins, grades):
     """
-    Create Telegraph report pages for school login statistics.
-    Splits large pages into chunks to avoid CONTENT_TOO_BIG.
+    Create a Telegraph report listing all schools, each with stats and links
+    to their success/fail login lists (paginated if too large).
     """
 
     def chunk_list(data, size):
@@ -118,102 +118,107 @@ async def create_school_login_report(user, school_number, school_id, all_logins,
     def mask_text(text: str) -> str:
         return text[:-2] + "*" * 2
 
-    grouped = defaultdict(list)
+    school_blocks = []  # all school HTML summaries
 
-    # Group logins by grade
-    for login in all_logins:
-        if isinstance(grades, dict):
-            grade_name = grades.get(int(login.grade), "Unknown")
-        else:
-            grade_name = getattr(grades, "grade", "Unknown")
-        grouped[grade_name].append(login)
+    # Loop through every school
+    for school in all_schools:
+        school_logins = [l for l in all_logins if int(l.school) == int(school.id)]
+        if not school_logins:
+            continue  # skip schools with no logins
 
-    s_t, f_t = "", ""
-    s, f = 0, 0
-
-    for grade_name in sorted(grouped.keys()):
-        grade_logins = grouped[grade_name]
-        success_block = f"<h3>📗 {grade_name} sinf (✅ Kirilganlar)</h3>"
-        fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
-
-        for index,i in enumerate(grade_logins):
-            row = f"""
-            {f'<b>Uniq_ID</b> {index+1}<br><b>ID:</b> {index}<br>' if user.role=='owner' else
-            f'<b>ID:</b> {index+1}<br>'}
-            <b>👤 Login:</b> {mask_text(i.username)}<br>
-            <b>🔑 Parol:</b> {mask_text(i.password)}<br>
-            <b>📌 Holat:</b> {'✅ Kirilgan' if i.last_login else '❌ Kirilmagan'}<br>
-            <b>⏰ So‘nggi kirish:</b> {format_time(i.updated_at)}<br>
-            <hr>
-            """
-            if i.last_login:
-                s += 1
-                success_block += row
+        grouped = defaultdict(list)
+        for login in school_logins:
+            if isinstance(grades, dict):
+                grade_name = grades.get(int(login.grade), f"{login.grade}-sinf")
             else:
-                f += 1
-                fail_block += row
+                grade_name = getattr(grades, "grade", f"{login.grade}-sinf")
+            grouped[grade_name].append(login)
 
-        s_t += success_block
-        f_t += fail_block
+        s_t, f_t = "", ""
+        s, f = 0, 0
 
-    total = s + f
-    stats_html = f"""
-    <h3>{school_number.school_number}-maktab 📊 Umumiy statistika</h3>
-    <b>👥 Jami loginlar:</b> {total}<br>
-    <b>✅ Kirilgan:</b> {s}<br>
-    <b>❌ Kirilmagan:</b> {f}<br>
-    <b>📈 Muvaffaqiyat foizi:</b> {round((s / total * 100), 1) if total else 0}%<br><br>
-    <a href="{{success_url}}">✅ Kirilgan loginlarni ko‘rish</a><br>
-    <a href="{{fail_url}}">❌ Kirilmagan loginlarni ko‘rish</a>
-    """
+        # Build HTML for each grade
+        for grade_name in sorted(grouped.keys()):
+            grade_logins = grouped[grade_name]
 
-    # Temporary page
-    stats_page = await to_thread(
-        telegraph.create_page,
-        title="Loginlar statistikasi",
-        html_content=stats_html.replace("{success_url}", "#").replace("{fail_url}", "#")
-    )
-    stats_url = stats_page["url"]
+            success_block = f"<h3>📗 {grade_name} sinf (✅ Kirilganlar)</h3>"
+            fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
 
-    # Split large success/fail pages into chunks
-    async def create_split_pages(prefix, html_text, icon):
-        pages = []
-        parts = list(chunk_list(html_text.split("<hr>"), 80))  # 80 rows per page
-        for idx, chunk in enumerate(parts):
-            page_html = f"<h3>{icon} {prefix} (sahifa {idx+1})</h3>" + "<hr>".join(chunk)
-            page = await to_thread(
+            for index, i in enumerate(grade_logins):
+                row = f"""
+                <b>ID:</b> {index + 1}<br>
+                <b>👤 Login:</b> {mask_text(i.username)}<br>
+                <b>🔑 Parol:</b> {mask_text(i.password)}<br>
+                <b>📌 Holat:</b> {'✅ Kirilgan' if i.last_login else '❌ Kirilmagan'}<br>
+                <b>⏰ So‘nggi kirish:</b> {format_time(i.updated_at) if i.updated_at else ''}<br>
+                <hr>
+                """
+                if i.last_login:
+                    s += 1
+                    success_block += row
+                else:
+                    f += 1
+                    fail_block += row
+
+            s_t += success_block
+            f_t += fail_block
+
+        total = s + f
+
+        # --- Create subpages with pagination ---
+        async def create_split_pages(prefix, html_text, icon):
+            pages = []
+            parts = list(chunk_list(html_text.split("<hr>"), 80))
+            for idx, chunk in enumerate(parts):
+                page_html = f"<h3>{icon} {prefix} – {school.school_number}-maktab (sahifa {idx + 1})</h3>" + "<hr>".join(chunk)
+                page = await to_thread(
+                    telegraph.create_page,
+                    title=f"{school.school_number}-maktab {prefix} ({idx + 1})",
+                    html_content=page_html
+                )
+                pages.append(page["url"])
+            return "<br>".join(f"<a href='{url}'>{prefix} – sahifa {i + 1}</a>" for i, url in enumerate(pages))
+
+        success_pages_html = await create_split_pages("✅ Kirilganlar", s_t, "✅") if s else "–"
+        fail_pages_html = await create_split_pages("❌ Kirilmaganlar", f_t, "❌") if f else "–"
+
+        # --- Create school-level summary block ---
+        school_block = f"""
+        <h3>{school.school_number}-maktab 📊</h3>
+        👥 Jami loginlar: {total}<br>
+        ✅ Kirilgan: {s}<br>
+        ❌ Kirilmagan: {f}<br>
+        📈 Muvaffaqiyat foizi: {round((s / total * 100), 1) if total else 0}%<br>
+        """
+
+        if s != 0:
+            success_page = await to_thread(
                 telegraph.create_page,
-                title=f"{school_number.school_number}-maktab {prefix} ({idx+1})",
-                html_content=page_html
+                title=f"{school.school_number}-maktab ✅ Kirilganlar",
+                html_content=f"<h3>✅ {school.school_number}-maktab Kirilgan loginlar</h3>{success_pages_html}"
             )
-            pages.append(page["url"])
-        # Combine small page links
-        return "<br>".join(f"<a href='{url}'>{prefix} – sahifa {i+1}</a>" for i, url in enumerate(pages))
+            school_block += f"<a href='{success_page['url']}'>✅ Kirilgan loginlar ({s} ta)</a><br>"
 
-    success_pages_html = await create_split_pages("✅ Kirilganlar", s_t, "✅")
-    fail_pages_html = await create_split_pages("❌ Kirilmaganlar", f_t, "❌")
+        if f != 0:
+            fail_page = await to_thread(
+                telegraph.create_page,
+                title=f"{school.school_number}-maktab ❌ Kirilmaganlar",
+                html_content=f"<h3>❌ {school.school_number}-maktab Kirilmagan loginlar</h3>{fail_pages_html}"
+            )
+            school_block += f"<a href='{fail_page['url']}'>❌ Kirilmagan loginlar ({f} ta)</a><br>"
 
-    success_page = await to_thread(
+        school_block += "<hr>"
+        school_blocks.append(school_block)
+
+    # --- Final Telegraph page (all schools together) ---
+    all_html = "<h3>🏫 Barcha maktablar login statistikasi</h3><br>" + "".join(school_blocks)
+    final_page = await to_thread(
         telegraph.create_page,
-        title=f"{school_number.school_number}-maktab ✅ Kirilganlar",
-        html_content=f"<h3>✅ Kirilgan loginlar</h3>{success_pages_html}<br><a href='{stats_url}'>⬅️ Orqaga</a>"
-    )
-    fail_page = await to_thread(
-        telegraph.create_page,
-        title=f"{school_number.school_number}-maktab ❌ Kirilmaganlar",
-        html_content=f"<h3>❌ Kirilmagan loginlar</h3>{fail_pages_html}<br><a href='{stats_url}'>⬅️ Orqaga</a>"
+        title="Barcha maktablar login statistikasi",
+        html_content=all_html
     )
 
-    # Update stats page with working links
-    final_stats_html = stats_html.replace("{success_url}", success_page["url"]).replace("{fail_url}", fail_page["url"])
-    await to_thread(
-        telegraph.edit_page,
-        path=stats_page["path"],
-        title=f"{school_number.school_number}-maktab statistikasi",
-        html_content=final_stats_html
-    )
-
-    return stats_url
+    return final_page["url"]
 
 
 @dp.message(CommandStart())
@@ -248,101 +253,62 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
 
             # 🧩 Admin / Owner — show all grades grouped
             if user.role.lower() in ("admin", "owner"):
-                all_logins = await get_all_logins(school2=school_id)
+                all_schools = await get_all_schools()
+                all_logins = await get_all_logins()
+                grades = await get_logins_grade_for_web(logins={login.grade for login in all_logins})
 
-                grouped = defaultdict(list)
-
-                # ✅ Step 1: collect unique grade IDs
-                grade_ids = {login.grade for login in all_logins}
-
-                # ✅ Step 2: fetch all grades in one query
-                grades = await get_logins_grade_for_web(logins=grade_ids)
-
-                # ✅ Step 3: group logins by grade name
-                for login in all_logins:
-                    grade_name = grades.get(int(login.grade), "Unknown")
-                    grouped[grade_name].append(login)
-
-                s_t, f_t = "", ""
-                s, f = 0, 0
-
-                def format_time(dt):
-                    return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
-
-                def mask_text(text: str) -> str:
-                    return text[:-2] + "*" * 2
-
-                for grade_name in sorted(grouped.keys()):
-                    grade_logins = grouped[grade_name]
-                    grade_len = 0
-                    success_block = f"<h3>📗 {grade_name} sinf <br>Jami: {len(grade_logins)}(✅ Kirilganlar)</h3>"
-                    fail_block = f"<h3>📕 {grade_name} sinf (❌ Kirilmaganlar)</h3>"
-
-                    for i in grade_logins:
-                        grade_len +=1
-                        row = f"""
-                        <b>ID:</b> {i.id}<br>
-                        <b>👤 Login:</b> {mask_text(i.username)}<br>
-                        <b>🔑 Parol:</b> {mask_text(i.password)}<br>
-                        <b>📌 Holat:</b> {'✅ Kirilgan' if i.last_login else '❌ Kirilmagan'}<br>
-                        <b>⏰ So‘nggi kirish:</b> {format_time(i.updated_at)}<br>
-                        <hr>
-                        """
-                        if i.last_login:
-                            s += 1
-                            success_block += row
-                        else:
-                            f += 1
-                            fail_block += row
-
-                    s_t += success_block
-                    f_t += fail_block
-
-                total = s + f
-
-                stats_url = await create_school_login_report(
+                stats_url = await create_all_schools_report(
                     user=user,
-                    school_number=school_number,
-                    school_id=school_id,
+                    all_schools=all_schools,
                     all_logins=all_logins,
                     grades=grades
                 )
 
                 await msg.edit_text(
-                    f'<a href="{stats_url}">📖 {school_number.school_number}-maktab loginlari</a>',
+                    f'<a href="{stats_url}">📖 Barcha maktablar login statistikasi</a>',
                     parse_mode="HTML",
                     protect_content=True
                 )
-                await state.clear()
-                return
 
-            # 🧩 Admin / Owner — show all grades grouped
-            if user.role.lower() in ("user"):
-                all_logins = await get_all_logins(school2=school_id,grade=user.grade)
+
+# 🧩 Admin / Owner — show all grades grouped
+            if user.role.lower() == "user":
+                # ✅ Get the user's school directly
+                school_id = user.school_id
+
+                # ✅ Fetch all logins for this school & the user’s grade
+                all_logins = await get_all_logins(school2=school_id, grade=user.grade)
 
                 grouped = defaultdict(list)
 
                 # ✅ Step 1: collect unique grade IDs
-                grade_ids = [login.grade for login in all_logins]
+                grade_ids = list({login.grade for login in all_logins})
 
-                # ✅ Step 2: fetch all grades in one query
-                grades = await get_grade(id=grade_ids[0])
+                # ✅ Step 2: fetch all grades in one query (use list of ids)
+                grades = []
+                for gid in grade_ids:
+                    grade = await get_grade(id=gid)
+                    if grade:
+                        grades.append(grade)
 
+                # ✅ Step 3: get the school info
+                school_obj = await get_school_number(id=school_id)
 
-
-                stats_url = await create_school_login_report(
+                # ✅ Step 4: generate Telegraph report
+                stats_url = await create_all_schools_report(
                     user=user,
-                    school_number=school_number,
-                    school_id=school_id,
+                    all_schools=[school_obj],  # only this user’s school
                     all_logins=all_logins,
                     grades=grades
                 )
 
+                # ✅ Step 5: send the report link
                 await msg.edit_text(
-                    f'<a href="{stats_url}">📖 {school_number.school_number}-maktab loginlari</a>',
+                    f'<a href="{stats_url}">📖 {school_obj.school_number}-maktab loginlari</a>',
                     parse_mode="HTML",
                     protect_content=True
                 )
+
                 await state.clear()
                 return
 
@@ -406,7 +372,6 @@ async def start(message: Message, command: CommandStart, state: FSMContext):
 async def catch_grade(callback: CallbackQuery):
     data = callback.data.split("grade_")[1]
     number, letter = data.split('_')[0], data.split('_')[1]
-    print(callback.from_user.id)
     user = await create_user(tg_id=callback.from_user.id, grade=f"{number}{letter.upper()}")
     await callback.message.edit_text(text=f"Siz {number}-{letter.upper()} sinfdasiz")
 
@@ -525,7 +490,6 @@ async def password(message: Message, state: FSMContext):
     login = {'1': {'username': login1, 'password': password, 'last_login': False, 'last_cookie': '',
                    "tg_id": message.from_user.id, 'login_id': False, "grade": user.grade}}
     response = await send_request_main(login)
-    print(response)
     bot_username = await bot.get_me()
     a = False
     if not response['1']['last_login']:
@@ -585,28 +549,47 @@ async def password(message: Message, state: FSMContext):
         n_message = text[4:].strip()
     else:
         n_message = text
+
     try:
         user = await create_user(message.from_user.id)
     except InterfaceError:
         user = await create_user(message.from_user.id)
-
 
     school_id = user.school_id
 
     # split by comma and clean spaces
     logins = [item.strip() for item in n_message.split(",") if item.strip()]
 
-    tasks = []
-    for item in logins:
-        try:
-            login, pwd = item.split(":", 1)
-            tasks.append(log_in(message, login, pwd, school_id, await give_captcha_100(30), grade=user.grade))
-        except ValueError:
-            pass
-    await asyncio.gather(*tasks, return_exceptions=True)
+    # batch size
+    batch_size = 10
+
+    for i in range(0, len(logins), batch_size):
+        batch = logins[i:i + batch_size]
+        tasks = []
+
+        for item in batch:
+            try:
+                login, pwd = item.split(":", 1)
+                tasks.append(
+                    log_in(
+                        message,
+                        login,
+                        pwd,
+                        school_id,
+                        await give_captcha_100(30),
+                        grade=user.grade
+                    )
+                )
+            except ValueError:
+                pass
+
+        # Run 10 at once, wait before next batch
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Optional small pause between batches (e.g., 2s)
+        await asyncio.sleep(2)
 
     return
-
 
 async def login_schedule(user: int | None = None):
     # 1️⃣ Load all logins
@@ -689,10 +672,9 @@ async def login_schedule(user: int | None = None):
 
         #If user is not admin — send only their own class info
         else:
-            print(grouped, user_obj.school_id, user_obj.grade)
+            print(grouped)
             key = (int(user_obj.school_id), str(user_obj.grade).strip())
             send_message = grouped.get(key)
-            print("_" * 80, send_message)
             if not send_message:
                 print("⚠️ No logins found for:", key)
                 return
@@ -815,7 +797,6 @@ async def show_json(message: Message):
             return
         for i in range(0, 1000, 50):
             try:
-                print(i)
                 await bot.delete_messages(chat_id=message.from_user.id, message_ids=[messages for messages in
                                                                                      range(message.message_id - 50 + i,
                                                                                            message.message_id + 1 - i)])
