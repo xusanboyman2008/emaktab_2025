@@ -19,13 +19,13 @@ async def main2():
 
 
 def run_flask():
-    port = int(os.environ.get("PORT", 5000))  # 5000 for local dev, Render will override
+    port = int(os.environ.get("PORT", 8480))  # 5000 for local dev, Render will override
     app.run(port=port, debug=False, use_reloader=False)
 
 
 async def run_flask2():
     config = Config()
-    config.bind = ["0.0.0.0:5000"]
+    config.bind = ["0.0.0.0:8480"]
     await serve(app, config)
 
 async def joind():
@@ -33,18 +33,21 @@ async def joind():
     await run_flask2()
 
 
-
 if __name__ == "__main__":
-    try:
-        print("bot started")
-        #
-        # # Start Flask in a thread
-        # flask_thread = threading.Thread(target=run_flask)
-        # flask_thread.start()
-        #
-        # # Run bot loop
-        # asyncio.run(main2())
-        asyncio.run(joind())
+    import asyncio
 
+    async def start_all():
+        print("bot started")
+        await init()
+        asyncio.create_task(send_json())
+        asyncio.create_task(dp.start_polling(bot, skip_updates=True))
+
+        # Run Quart (Hypercorn) on same event loop
+        config = Config()
+        config.bind = ["0.0.0.0:8480"]
+        await serve(app, config)
+
+    try:
+        asyncio.run(start_all())
     except (KeyboardInterrupt, RuntimeError):
         print("bot stopped")
