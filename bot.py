@@ -36,7 +36,7 @@ telegraph.create_account(short_name="xusanboy")
 # url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev'
 url = os.getenv('URL', "https://emaktab-2025.onrender.com/")
 # Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
-Token = os.getenv('TOKEN', "8487399599:AAF2X6hfa39-CSpwp72e1sGNabXMLodGAdM")
+Token = os.getenv('TOKEN', "8301189313:AAEePiO5uaAMA01sbQLOts6TguUaztlbNaw")
 bot = Bot(token=Token, default=DefaultBotProperties(
     parse_mode=ParseMode.HTML
 ))
@@ -844,8 +844,8 @@ async def main():
     scheduler.add_job(
         send_json,
         trigger="cron",
-        hour=17,
-        minute=55,
+        hour=7,
+        minute=0,
         timezone=pytz.timezone("Asia/Tashkent"),
     )
 
