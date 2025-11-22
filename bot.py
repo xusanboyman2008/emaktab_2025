@@ -5,6 +5,7 @@ import random
 from asyncio import to_thread
 from collections import defaultdict
 
+import pytz
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ChatAction
@@ -21,7 +22,7 @@ from telegraph import Telegraph
 from telegraph.exceptions import RetryAfterError
 
 from database import get_all_logins, create_logins_data, create_login, create_user, get_all_users, create_school, \
-    update_user, add_captcha_id, get_free_captcha, get_school_number, create_database_back_up, \
+    update_user, add_captcha_id, get_free_captcha, get_school_number, \
     create_or_change_user_role, init, give_captcha_100
 from database import get_all_schools
 from database import get_grade
@@ -35,7 +36,7 @@ telegraph.create_account(short_name="xusanboy")
 # url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev'
 url = os.getenv('URL', "https://emaktab-2025.onrender.com/")
 # Token = '7234794963:AAHQa70czYEIVlrPRTPiv_-6IvhcYzlVJ9M'
-Token = os.getenv('TOKEN', "8301189313:AAEePiO5uaAMA01sbQLOts6TguUaztlbNaw")
+Token = os.getenv('TOKEN', "8487399599:AAF2X6hfa39-CSpwp72e1sGNabXMLodGAdM")
 bot = Bot(token=Token, default=DefaultBotProperties(
     parse_mode=ParseMode.HTML
 ))
@@ -788,7 +789,7 @@ async def give_a_role(message: Message):
 
 
 async def send_json():
-    while True:
+        print('working')
         await login_schedule()
         cat = FSInputFile("database.sqlite3")
         users = await get_all_users()
@@ -837,13 +838,21 @@ async def show_json(message: Message):
 
 async def main():
     await init()
-    scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")
 
-    # Run every day at 07:00 Uzbekistan time
-    scheduler.add_job(send_json, trigger="cron", hour=19, minute=25)
+    scheduler = AsyncIOScheduler()
+
+    scheduler.add_job(
+        send_json,
+        trigger="cron",
+        hour=17,
+        minute=55,
+        timezone=pytz.timezone("Asia/Tashkent"),
+    )
 
     scheduler.start()
+
     await dp.start_polling(bot)
+
 
 
 if __name__ == '__main__':
