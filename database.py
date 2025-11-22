@@ -3,14 +3,14 @@ import json
 import os
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy import Column, Integer, String, ForeignKey, select, DateTime, BigInteger, Boolean, and_, Text
 from sqlalchemy.ext.asyncio import AsyncAttrs, create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
-
+uzb_tz = timezone(timedelta(hours=5))
 async def generate_unique_url(length: int = 15):
     # all ascii letters (uppercase + lowercase) + digits
     chars = string.ascii_letters + string.digits
@@ -55,7 +55,7 @@ class School_number(Base):
     school_number = Column(Integer)
     place = Column(String, nullable=True)
     is_paid = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
     expire_at = Column(
         DateTime,
         default=lambda: datetime.now() + timedelta(days=365)
@@ -67,7 +67,7 @@ class Captcha_ids(Base):
     id = Column(Integer, autoincrement=True, primary_key=True)
     captcha_id = Column(Text, unique=True, nullable=False)
     is_occupied = Column(Boolean, default=False)
-    last_used = Column(DateTime, default=datetime.now)
+    last_used = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
 
 
 class User(Base):
@@ -93,8 +93,8 @@ class Logins(Base):
     grade = Column(Text, nullable=False)
     last_cookie = Column(Text, nullable=True)
     last_login = Column(Boolean)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, onupdate=datetime.now)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(uzb_tz))
 
 
 class Logins_data(Base):
@@ -103,7 +103,7 @@ class Logins_data(Base):
     login_id = Column(Integer, ForeignKey("Logins.id"))
     last_cookie = Column(Text, nullable=True)
     last_login = Column(Boolean)
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
 
 
 TABLES = [User, School_number, Captcha_ids, Logins, Logins_data]

@@ -3,7 +3,7 @@ import os
 import threading
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
-from bot import dp, bot, send_json
+from bot import dp, bot, send_json, main
 from database import init
 from login_web import app
 
@@ -36,18 +36,9 @@ async def joind():
 if __name__ == "__main__":
     import asyncio
 
-    async def start_all():
-        print("bot started")
-        await init()
-        asyncio.create_task(send_json())
-        asyncio.create_task(dp.start_polling(bot, skip_updates=True))
-
-        # Run Quart (Hypercorn) on same event loop
-        config = Config()
-        config.bind = ["0.0.0.0:8480"]
-        await serve(app, config)
 
     try:
-        asyncio.run(start_all())
+        asyncio.run(main())
+
     except (KeyboardInterrupt, RuntimeError):
         print("bot stopped")

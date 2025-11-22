@@ -15,8 +15,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, reply_keyboard_remove, InlineKeyboardButton, \
     InlineKeyboardMarkup, WebAppInfo, FSInputFile, CallbackQuery
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.exc import InterfaceError
 from telegraph import Telegraph
+from telegraph.exceptions import RetryAfterError
 
 from database import get_all_logins, create_logins_data, create_login, create_user, get_all_users, create_school, \
     update_user, add_captcha_id, get_free_captcha, get_school_number, create_database_back_up, \
@@ -101,6 +103,18 @@ def grades_button(current_page: int):
     rows.append(nav_buttons)
 
     return InlineKeyboardMarkup(inline_keyboard=rows)
+async def create_page_safe(telegraph, title, content):
+    while True:
+        try:
+            return await to_thread(
+                telegraph,
+                title=title,
+                author_name='Me',
+                html_content=content
+            )
+        except RetryAfterError as e:
+            print(f"Telegraph limit! Waiting {e.retry_after} sec…")
+            await asyncio.sleep(e.retry_after)
 
 async def create_all_schools_report(user, all_schools, all_logins, grades):
     """
@@ -116,7 +130,7 @@ async def create_all_schools_report(user, all_schools, all_logins, grades):
         return dt.strftime("%d.%m.%Y %H:%M") + " ⏰"
 
     def mask_text(text: str) -> str:
-        return text[:-2] + "*" * 2
+        return text
 
     school_blocks = []  # all school HTML summaries
 
@@ -192,11 +206,8 @@ async def create_all_schools_report(user, all_schools, all_logins, grades):
         """
 
         if s != 0:
-            success_page = await to_thread(
-                telegraph.create_page,
-                title=f"{school.school_number}-maktab ✅ Kirilganlar",
-                html_content=f"<h3>✅ {school.school_number}-maktab Kirilgan loginlar</h3>{success_pages_html}"
-            )
+            await asyncio.sleep(1)   # prevent flood
+            success_page = await create_page_safe(telegraph.create_page,f"{school.school_number}-maktab ✅ Kirilganlar",f"<h3>✅ {school.school_number}-maktab Kirilgan loginlar</h3>{success_pages_html}")
             school_block += f"<a href='{success_page['url']}'>✅ Kirilgan loginlar ({s} ta)</a><br>"
 
         if f != 0:
@@ -779,18 +790,16 @@ async def give_a_role(message: Message):
 async def send_json():
     while True:
         await login_schedule()
-        await create_database_back_up()
-        cat = FSInputFile("database.json")
+        cat = FSInputFile("database.sqlite3")
         users = await get_all_users()
         for user in users:
             if user.role == 'owner':
                 await bot.send_document(chat_id=user.tg_id, document=cat)
-        await asyncio.sleep(3600 * 24)
 
 
 @dp.message(CommandStart)
 async def show_json(message: Message):
-    if message.text[:5] == 'clear':
+    if message.text and message.text.startswith('clear'):
         if message.text[5:].isdigit():
             await bot.delete_messages(chat_id=message.from_user.id, message_ids=[messages for messages in range(
                 message.message_id - int(message.text[5:]), message.message_id + 1)])
@@ -828,6 +837,12 @@ async def show_json(message: Message):
 
 async def main():
     await init()
+    scheduler = AsyncIOScheduler(timezone="Asia/Tashkent")
+
+    # Run every day at 07:00 Uzbekistan time
+    scheduler.add_job(send_json, trigger="cron", hour=19, minute=25)
+
+    scheduler.start()
     await dp.start_polling(bot)
 
 
