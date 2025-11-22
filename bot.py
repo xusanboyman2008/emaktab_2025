@@ -31,7 +31,11 @@ from send_aiohttps_requests import send_request_main
 
 # Create account once (not inside the handler every time!)
 telegraph = Telegraph()
-telegraph.create_account(short_name="xusanboy")
+
+try:
+    telegraph.create_account(short_name="xusanboy")
+except Exception as e:
+    print("Telegraph error:", e)
 
 # url = 'https://submergible-sigrid-unrabbinical.ngrok-free.dev'
 url = os.getenv('URL', "https://emaktab-2025.onrender.com/")
