@@ -1,10 +1,6 @@
-from quart import Quart, request, render_template_string, jsonify
-
+from aiohttp import web
 from database import create_login
 from login_by_username import login_by_user
-
-app = Quart(__name__)
-captcha_id = "859746ee-eb11-4ec1-9771-b835c710941b"
 
 file = '''<!DOCTYPE html>
 <html lang="en">
@@ -126,20 +122,16 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
-// Button spin + refresh captcha
 function dead() {
   const btn = document.getElementById('button');
-  btn.classList.add('spin'); // start spinning
-
+  btn.classList.add('spin');
   setTimeout(() => {
-    btn.classList.remove('spin'); // stop spinning
-    refreshCaptcha(); // refresh captcha after 10s
+    btn.classList.remove('spin');
+    refreshCaptcha();
   }, 10000);
 }
 
 function refreshCaptcha() {
-
-
   const captcha = document.getElementById('captchaImage');
   let url = captcha.getAttribute("src");
   captcha.src = url + '?_=' + Date.now();
@@ -147,40 +139,57 @@ function refreshCaptcha() {
 </script>
 </body>
 </html>
-
 '''
 
+routes = web.RouteTableDef()
 
-@app.route("/", methods=["GET"])
-async def home():
-    username = request.args.get("username", "")
-    password = request.args.get("password", "")
-    tg_id = request.args.get("tg_id", "")
-    captcha = request.args.get("captcha", captcha_id)
+
+@routes.get("/")
+async def home(request: web.Request):
+    username = request.query.get("username", "")
+    password = request.query.get("password", "")
+    tg_id = request.query.get("tg_id", "")
+    captcha = request.query.get("captcha", "f61a11f3-1cee-448c-ad2b-fd2eee8f9b2d")
     if not tg_id:
-        return jsonify({"success": False, "message": "Telegram ID ko'rsatilmadi."}), 400
-    return await render_template_string(file, username=username, password=password, captcha_id=captcha, tg_id=tg_id)
+        return web.json_response({"success": False, "message": "Telegram ID ko'rsatilmadi."}, status=400)
+
+    html_content = (
+        file.replace("{{ username }}", username)
+        .replace("{{ password }}", password)
+        .replace("{{ captcha_id }}", captcha)
+        .replace("{{ tg_id }}", tg_id)
+    )
+    return web.Response(text=html_content, content_type="text/html")
 
 
-@app.route("/login", methods=["POST"])
-async def login():
-    form = await request.form  # <-- must await
+@routes.post("/login")
+async def login(request: web.Request):
+    form = await request.post()
     username = form.get("username", "")
     password = form.get("password", "")
     captcha = form.get("captcha", "")
     captcha_id = form.get("captcha_id", "")
-    tg_id =form.get("tg_id", "")
-    print(username, password, captcha_id, captcha)
+    tg_id = form.get("tg_id", "")
 
-    cookie_len, cookie = await login_by_user(username=username, password=password, captcha_text=captcha,
-                                             captcha_id=captcha_id)
-    print(cookie_len)
+    cookie_len, cookie = await login_by_user(
+        username=username,
+        password=password,
+        captcha_text=captcha,
+        captcha_id=captcha_id
+    )
+
     if cookie_len > 3:
-        await create_login(password=password, username=username, last_login=True, cookie=cookie, tg_id=tg_id)
-        return jsonify({"success": True, "message": "Foydalanuvchi muvaffaqiyatli qo‘shildi!"})
+        await create_login(
+            password=password,
+            username=username,
+            last_login=True,
+            cookie=cookie,
+            tg_id=tg_id
+        )
+        return web.json_response({"success": True, "message": "Foydalanuvchi muvaffaqiyatli qo‘shildi!"})
     else:
-        return jsonify({"success": False, "message": "Login yoki parol noto‘g‘ri."})
-#
-#
-# if __name__ == "__main__":
-#     app.run(debug=True, port=4040)
+        return web.json_response({"success": False, "message": "Login yoki parol noto‘g‘ri."})
+
+
+app = web.Application()
+app.add_routes(routes)

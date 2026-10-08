@@ -4,7 +4,6 @@ import os
 import random
 from collections import defaultdict
 
-import pytz
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ChatAction, ParseMode
@@ -16,7 +15,6 @@ from aiogram.types import (
     Message, ReplyKeyboardMarkup, KeyboardButton, reply_keyboard_remove,
     InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, FSInputFile, CallbackQuery
 )
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.exc import InterfaceError
 from telegraph import Telegraph
 from telegraph.exceptions import RetryAfterError
@@ -684,16 +682,7 @@ async def show_json(message: Message):
 
 async def main():
     await init()
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        send_json,
-        trigger="cron",
-        hour=7,
-        minute=0,
-        timezone=pytz.timezone("Asia/Tashkent"),
-    )
-    scheduler.start()
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, skip_updates=True)
 
 
 if __name__ == '__main__':

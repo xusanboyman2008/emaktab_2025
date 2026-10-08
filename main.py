@@ -1,9 +1,8 @@
 import asyncio
 import os
-import pytz
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from hypercorn.asyncio import serve
-from hypercorn.config import Config
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+from aiohttp import web
 
 from bot import dp, bot, send_json
 from database import init, create_grades
@@ -11,33 +10,39 @@ from login_web import app
 
 
 async def run_scheduler():
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(
-        send_json,
-        trigger="cron",
-        hour=7,
-        minute=0,
-        timezone=pytz.timezone("Asia/Tashkent"),
-    )
-    scheduler.start()
+    """Native standard-library cron scheduler without external dependencies."""
+    tz = ZoneInfo("Asia/Tashkent")
+    while True:
+        now = datetime.now(tz)
+        target = now.replace(hour=7, minute=0, second=0, microsecond=0)
+        if target <= now:
+            target += timedelta(days=1)
+        sleep_seconds = (target - now).total_seconds()
+        print(f"⏰ Keyingi avtomatik tekshiruv: {target.strftime('%Y-%m-%d %H:%M')} (kutilmoqda: {sleep_seconds:.0f}s)")
+        await asyncio.sleep(sleep_seconds)
+        try:
+            await send_json()
+        except Exception as e:
+            print("⚠️ Rejali tekshiruvda xatolik:", e)
 
 
 async def run_server():
-    config = Config()
+    """Runs aiohttp web server concurrently on the specified port."""
     port = int(os.environ.get("PORT", 8480))
-    config.bind = [f"0.0.0.0:{port}"]
-    await serve(app, config)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"🌐 Veb-server ishga tushdi: http://0.0.0.0:{port}")
 
 
 async def main():
     await init()
     await create_grades()
-    await run_scheduler()
-    print("🚀 Bot va Web-server bir vaqtda ishga tushirildi...")
-    await asyncio.gather(
-        dp.start_polling(bot, skip_updates=True),
-        run_server()
-    )
+    asyncio.create_task(run_scheduler())
+    await run_server()
+    print("🚀 Bot va veb-server muvaffaqiyatli ishga tushirildi!")
+    await dp.start_polling(bot, skip_updates=True)
 
 
 if __name__ == "__main__":
