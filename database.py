@@ -8,8 +8,9 @@ from pathlib import Path
 
 from sqlalchemy import (
     Column, Integer, String, ForeignKey, select, DateTime,
-    BigInteger, Boolean, and_, Text, func
+    BigInteger, Boolean, and_, Text, func, event
 )
+from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs, create_async_engine, async_sessionmaker, AsyncSession
 )
@@ -17,19 +18,34 @@ from sqlalchemy.orm import DeclarativeBase
 
 uzb_tz = timezone(timedelta(hours=5))
 
-
-async def generate_unique_url(length: int = 15):
-    chars = string.ascii_letters + string.digits
-    ready_text = ''.join(random.choice(chars) for _ in range(length))
-    b = await get_school_number(url=ready_text)
-    if b:
-        ready_text += random.choice(chars)
-    return ready_text
-
-
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///database.sqlite3")
-engine = create_async_engine(DATABASE_URL, future=True)
+
+# SQLite Performance Pragma configuration (WAL mode, fast sync, RAM cache)
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    try:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute("PRAGMA synchronous=NORMAL;")
+        cursor.execute("PRAGMA cache_size=-64000;")  # 64MB cache
+        cursor.execute("PRAGMA temp_store=MEMORY;")
+        cursor.execute("PRAGMA mmap_size=268435456;") # 256MB memory map
+        cursor.close()
+    except Exception:
+        pass
+
+engine = create_async_engine(
+    DATABASE_URL,
+    future=True,
+    pool_pre_ping=True
+)
 async_session = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+
+# In-memory LRU/dict caches to avoid repeated database roundtrips
+_SCHOOL_CACHE_BY_ID = {}
+_SCHOOL_CACHE_BY_URL = {}
+_GRADE_CACHE_BY_ID = {}
+_GRADE_CACHE_BY_NAME = {}
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -39,14 +55,14 @@ class Base(AsyncAttrs, DeclarativeBase):
 class Grades(Base):
     __tablename__ = "Grade"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    grade = Column(Text)
+    grade = Column(Text, index=True)
 
 
 class School_number(Base):
     __tablename__ = "School_number"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    school_url = Column(String, unique=True, nullable=False)
-    school_number = Column(Integer)
+    school_url = Column(String, unique=True, nullable=False, index=True)
+    school_number = Column(Integer, index=True)
     place = Column(String, nullable=True)
     is_paid = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
@@ -59,8 +75,8 @@ class School_number(Base):
 class Captcha_ids(Base):
     __tablename__ = "Captcha_ids"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    captcha_id = Column(Text, unique=True, nullable=False)
-    is_occupied = Column(Boolean, default=False)
+    captcha_id = Column(Text, unique=True, nullable=False, index=True)
+    is_occupied = Column(Boolean, default=False, index=True)
     last_used = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
 
 
@@ -69,24 +85,24 @@ class User(Base):
     id = Column(Integer, autoincrement=True, primary_key=True)
     first_name = Column(String)
     username = Column(String, nullable=False)
-    tg_id = Column(BigInteger, unique=True)
-    role = Column(String, default="user")
+    tg_id = Column(BigInteger, unique=True, index=True)
+    role = Column(String, default="user", index=True)
     lang = Column(String, default='uz')
-    grade = Column(Text, nullable=True)
+    grade = Column(Text, nullable=True, index=True)
     captcha_for_web = Column(Text, ForeignKey("Captcha_ids.captcha_id"), nullable=True)
     captcha_for_bot = Column(Text, ForeignKey("Captcha_ids.captcha_id"), nullable=True)
-    school_id = Column(Integer, ForeignKey("School_number.id"))
+    school_id = Column(Integer, ForeignKey("School_number.id"), index=True)
 
 
 class Logins(Base):
     __tablename__ = "Logins"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    school = Column(Integer, ForeignKey("School_number.id"))
-    username = Column(String)
+    school = Column(Integer, ForeignKey("School_number.id"), index=True)
+    username = Column(String, index=True)
     password = Column(String)
-    grade = Column(Text, nullable=False)
+    grade = Column(Text, nullable=False, index=True)
     last_cookie = Column(Text, nullable=True)
-    last_login = Column(Boolean)
+    last_login = Column(Boolean, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(uzb_tz))
 
@@ -94,13 +110,22 @@ class Logins(Base):
 class Logins_data(Base):
     __tablename__ = "Logins_data"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    login_id = Column(Integer, ForeignKey("Logins.id"))
+    login_id = Column(Integer, ForeignKey("Logins.id"), index=True)
     last_cookie = Column(Text, nullable=True)
     last_login = Column(Boolean)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
 
 
 TABLES = [User, School_number, Captcha_ids, Logins, Logins_data]
+
+
+async def generate_unique_url(length: int = 15):
+    chars = string.ascii_letters + string.digits
+    ready_text = ''.join(random.choice(chars) for _ in range(length))
+    b = await get_school_number(url=ready_text)
+    if b:
+        ready_text += random.choice(chars)
+    return ready_text
 
 
 def row_to_dict(row):
@@ -122,16 +147,32 @@ async def create_grades():
     async with async_session() as session:
         result = await session.execute(select(Grades).limit(1))
         if result.scalar_one_or_none():
+            # Populate cache
+            all_g = await session.execute(select(Grades))
+            for g in all_g.scalars().all():
+                _GRADE_CACHE_BY_ID[g.id] = g
+                _GRADE_CACHE_BY_NAME[g.grade] = g
             return True
+
         for i in range(1, 12):
             for j in ["A", "B", "V", "G"]:
                 new_grade = Grades(grade=f"{i}{j}")
                 session.add(new_grade)
         await session.commit()
+
+        all_g = await session.execute(select(Grades))
+        for g in all_g.scalars().all():
+            _GRADE_CACHE_BY_ID[g.id] = g
+            _GRADE_CACHE_BY_NAME[g.grade] = g
         return True
 
 
 async def get_grade(grade=None, id=None):
+    if id is not None and id in _GRADE_CACHE_BY_ID:
+        return _GRADE_CACHE_BY_ID[id]
+    if grade and str(grade).strip() in _GRADE_CACHE_BY_NAME:
+        return _GRADE_CACHE_BY_NAME[str(grade).strip()]
+
     async with async_session() as session:
         if id is not None:
             a = await session.execute(select(Grades).where(Grades.id == int(id)))
@@ -139,7 +180,11 @@ async def get_grade(grade=None, id=None):
             a = await session.execute(select(Grades).where(Grades.grade == str(grade).strip()))
         else:
             return None
-        return a.scalar_one_or_none()
+        obj = a.scalar_one_or_none()
+        if obj:
+            _GRADE_CACHE_BY_ID[obj.id] = obj
+            _GRADE_CACHE_BY_NAME[obj.grade] = obj
+        return obj
 
 
 async def create_user(tg_id, grade=None, first_name=None, username=None, school_id=None, role=None):
@@ -148,21 +193,25 @@ async def create_user(tg_id, grade=None, first_name=None, username=None, school_
         existing_user = result.scalar_one_or_none()
 
         if existing_user:
+            updated = False
             if grade:
                 grade_obj = await get_grade(grade=grade)
-                if grade_obj:
-                    existing_user.grade = str(grade_obj.id)
-                else:
-                    existing_user.grade = str(grade)
+                existing_user.grade = str(grade_obj.id) if grade_obj else str(grade)
+                updated = True
             if school_id:
                 existing_user.school_id = school_id
+                updated = True
             if role:
                 existing_user.role = role
-            if first_name:
+                updated = True
+            if first_name and existing_user.first_name != first_name:
                 existing_user.first_name = first_name
-            if username:
+                updated = True
+            if username and existing_user.username != username:
                 existing_user.username = username
-            await session.commit()
+                updated = True
+            if updated:
+                await session.commit()
             return existing_user
 
         grade_val = None
@@ -184,22 +233,37 @@ async def create_user(tg_id, grade=None, first_name=None, username=None, school_
 
 
 async def get_logins_grade_for_web(logins):
-    async with async_session() as session:
-        if not logins:
-            return {}
-        login_ids = []
-        for i in logins:
-            try:
-                login_ids.append(int(i))
-            except (ValueError, TypeError):
-                continue
-        if not login_ids:
-            return {}
-        result = await session.execute(
-            select(Grades).where(Grades.id.in_(login_ids))
-        )
-        grades = result.scalars().all()
-        return {grade.id: grade.grade for grade in grades}
+    if not logins:
+        return {}
+    login_ids = []
+    for i in logins:
+        try:
+            login_ids.append(int(i))
+        except (ValueError, TypeError):
+            continue
+    if not login_ids:
+        return {}
+
+    # Check cache first
+    result = {}
+    missing_ids = []
+    for lid in login_ids:
+        if lid in _GRADE_CACHE_BY_ID:
+            result[lid] = _GRADE_CACHE_BY_ID[lid].grade
+        else:
+            missing_ids.append(lid)
+
+    if missing_ids:
+        async with async_session() as session:
+            db_res = await session.execute(
+                select(Grades).where(Grades.id.in_(missing_ids))
+            )
+            for g in db_res.scalars().all():
+                _GRADE_CACHE_BY_ID[g.id] = g
+                _GRADE_CACHE_BY_NAME[g.grade] = g
+                result[g.id] = g.grade
+
+    return result
 
 
 async def update_user(Tg_id, school_url):
@@ -229,6 +293,8 @@ async def create_school(school_number, place, days, edit=False):
             if edit:
                 r.expire_at = datetime.now() + timedelta(days=int(days))
                 await session.commit()
+            _SCHOOL_CACHE_BY_ID[r.id] = r
+            _SCHOOL_CACHE_BY_URL[r.school_url] = r
             return r
 
         url = await generate_unique_url()
@@ -240,10 +306,17 @@ async def create_school(school_number, place, days, edit=False):
         )
         session.add(new_school)
         await session.commit()
+        _SCHOOL_CACHE_BY_ID[new_school.id] = new_school
+        _SCHOOL_CACHE_BY_URL[new_school.school_url] = new_school
         return new_school
 
 
 async def get_school_number(url=None, id=None):
+    if id is not None and id in _SCHOOL_CACHE_BY_ID:
+        return _SCHOOL_CACHE_BY_ID[id]
+    if url and url in _SCHOOL_CACHE_BY_URL:
+        return _SCHOOL_CACHE_BY_URL[url]
+
     async with async_session() as session:
         if url:
             stmt = select(School_number).where(School_number.school_url == url)
@@ -255,26 +328,26 @@ async def get_school_number(url=None, id=None):
         else:
             return None
         a = await session.execute(stmt)
-        return a.scalar_one_or_none()
+        obj = a.scalar_one_or_none()
+        if obj:
+            _SCHOOL_CACHE_BY_ID[obj.id] = obj
+            _SCHOOL_CACHE_BY_URL[obj.school_url] = obj
+        return obj
 
 
 async def get_free_captcha():
     async with async_session() as session:
-        a = await session.execute(select(Captcha_ids).where(Captcha_ids.is_occupied == False))
-        r = a.scalars().all()
-        if r:
-            return r[0].captcha_id
-        return None
+        stmt = select(Captcha_ids.captcha_id).where(Captcha_ids.is_occupied == False).limit(1)
+        res = await session.execute(stmt)
+        return res.scalar_one_or_none()
 
 
 async def create_captcha_ids(captcha_id):
     async with async_session() as session:
         a = await session.execute(select(Captcha_ids).where(Captcha_ids.captcha_id == captcha_id))
-        r = a.scalar_one_or_none()
-        if r:
+        if a.scalar_one_or_none():
             return False
-        new_captcha_id = Captcha_ids(captcha_id=captcha_id)
-        session.add(new_captcha_id)
+        session.add(Captcha_ids(captcha_id=captcha_id))
         await session.commit()
         return True
 
@@ -363,6 +436,24 @@ async def create_logins_data(login_id, last_login, last_cookie):
         return True
 
 
+async def bulk_create_logins_data(items: list[dict]):
+    """High-speed batch insert of login history in a single transaction."""
+    if not items:
+        return True
+    async with async_session() as session:
+        records = [
+            Logins_data(
+                login_id=item["login_id"],
+                last_login=item["last_login"],
+                last_cookie=item["last_cookie"]
+            )
+            for item in items
+        ]
+        session.add_all(records)
+        await session.commit()
+        return True
+
+
 async def get_all_logins(school2=None, grade=None):
     async with async_session() as session:
         if school2:
@@ -395,6 +486,26 @@ async def update_logins(login_id, last_login, last_cookie, password=None):
         return False
 
 
+async def bulk_update_logins(items: list[dict]):
+    """High-speed batch update of logins in a single transaction."""
+    if not items:
+        return True
+    async with async_session() as session:
+        for item in items:
+            lid = item.get("login_id")
+            if not lid:
+                continue
+            a = await session.execute(select(Logins).where(Logins.id == lid))
+            r = a.scalar_one_or_none()
+            if r:
+                r.last_login = item["last_login"]
+                r.last_cookie = item["last_cookie"]
+                if "password" in item and item["password"]:
+                    r.password = item["password"]
+        await session.commit()
+        return True
+
+
 async def get_all_captcha():
     async with async_session() as session:
         a = await session.execute(select(func.count(Captcha_ids.id)))
@@ -415,12 +526,18 @@ async def create_or_change_user_role(user_tg, role='admin'):
 async def get_all_schools(only_exist=False):
     async with async_session() as session:
         a = await session.execute(select(School_number))
-        return a.scalars().all()
+        schools = a.scalars().all()
+        for s in schools:
+            _SCHOOL_CACHE_BY_ID[s.id] = s
+            _SCHOOL_CACHE_BY_URL[s.school_url] = s
+        return schools
 
 
 async def init():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await create_grades()
+    await get_all_schools()
 
 
 async def add_captchas_by():
@@ -442,7 +559,6 @@ async def create_database_back_up():
 
 async def main():
     await init()
-    await create_grades()
 
 
 if __name__ == "__main__":

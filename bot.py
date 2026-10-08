@@ -22,7 +22,7 @@ from telegraph import Telegraph
 from telegraph.exceptions import RetryAfterError
 
 from database import (
-    get_all_logins, create_logins_data, create_login, create_user,
+    get_all_logins, create_logins_data, bulk_create_logins_data, create_login, create_user,
     get_all_users, create_school, update_user, add_captcha_id,
     get_free_captcha, get_school_number, create_or_change_user_role,
     init, give_captcha_100, get_all_schools, get_grade, get_logins_grade_for_web
@@ -562,14 +562,15 @@ async def login_schedule(user_id: int | None = None):
 
     response = await send_request_main(logins, bot)
 
-    await asyncio.gather(*[
-        create_logins_data(
-            login_id=sid,
-            last_login=data["last_login"],
-            last_cookie=data["last_cookie"]
-        )
+    bulk_items = [
+        {
+            "login_id": sid,
+            "last_login": data["last_login"],
+            "last_cookie": data["last_cookie"]
+        }
         for sid, data in response.items()
-    ])
+    ]
+    await bulk_create_logins_data(bulk_items)
 
     grouped = defaultdict(lambda: defaultdict(dict))
     for uid, data in response.items():
