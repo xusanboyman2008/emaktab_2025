@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.session
+*.log
+database.sqlite3
+database_last.json
+database_last_ready.json

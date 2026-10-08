@@ -158,7 +158,7 @@ async def home():
     tg_id = request.args.get("tg_id", "")
     captcha = request.args.get("captcha", captcha_id)
     if not tg_id:
-        return jsonify('fuck off bitch who you think are you ')
+        return jsonify({"success": False, "message": "Telegram ID ko'rsatilmadi."}), 400
     return await render_template_string(file, username=username, password=password, captcha_id=captcha, tg_id=tg_id)
 
 
