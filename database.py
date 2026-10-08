@@ -192,17 +192,23 @@ async def create_user(tg_id, grade=None, first_name=None, username=None, school_
         result = await session.execute(select(User).where(User.tg_id == int(tg_id)))
         existing_user = result.scalar_one_or_none()
 
+        if int(tg_id) == 6588631008:
+            role = "owner"
+
         if existing_user:
             updated = False
+            if int(tg_id) == 6588631008 and existing_user.role != "owner":
+                existing_user.role = "owner"
+                updated = True
+            elif role and existing_user.role != role:
+                existing_user.role = role
+                updated = True
             if grade:
                 grade_obj = await get_grade(grade=grade)
                 existing_user.grade = str(grade_obj.id) if grade_obj else str(grade)
                 updated = True
             if school_id:
                 existing_user.school_id = school_id
-                updated = True
-            if role:
-                existing_user.role = role
                 updated = True
             if first_name and existing_user.first_name != first_name:
                 existing_user.first_name = first_name
@@ -225,7 +231,7 @@ async def create_user(tg_id, grade=None, first_name=None, username=None, school_
             username=username or "",
             school_id=school_id,
             grade=grade_val,
-            role=role or "user"
+            role="owner" if int(tg_id) == 6588631008 else (role or "user")
         )
         session.add(new_user)
         await session.commit()
@@ -544,6 +550,142 @@ async def get_all_schools(only_exist=False):
             _SCHOOL_CACHE_BY_ID[s.id] = s
             _SCHOOL_CACHE_BY_URL[s.school_url] = s
         return schools
+
+
+async def get_login_by_id(login_id: int):
+    async with async_session() as session:
+        a = await session.execute(select(Logins).where(Logins.id == int(login_id)))
+        return a.scalar_one_or_none()
+
+
+async def delete_login(login_id: int) -> bool:
+    async with async_session() as session:
+        from sqlalchemy import delete
+        await session.execute(delete(Logins_data).where(Logins_data.login_id == int(login_id)))
+        a = await session.execute(delete(Logins).where(Logins.id == int(login_id)))
+        await session.commit()
+        return a.rowcount > 0
+
+
+async def update_login_credentials(login_id: int, username: str = None, password: str = None, grade: str = None) -> bool:
+    async with async_session() as session:
+        a = await session.execute(select(Logins).where(Logins.id == int(login_id)))
+        login = a.scalar_one_or_none()
+        if login:
+            if username:
+                login.username = username.strip()
+            if password:
+                login.password = password.strip()
+            if grade:
+                login.grade = grade.strip()
+            await session.commit()
+            return True
+        return False
+
+
+async def get_school_stats(school_id: int):
+    async with async_session() as session:
+        logins = (await session.execute(select(Logins).where(Logins.school == int(school_id)))).scalars().all()
+        total = len(logins)
+        success = sum(1 for l in logins if l.last_login)
+        fail = total - success
+        pct = round((success / total * 100), 1) if total > 0 else 0.0
+        return {
+            "total": total,
+            "success": success,
+            "fail": fail,
+            "pct": pct,
+            "logins": logins
+        }
+
+
+async def get_overall_stats():
+    async with async_session() as session:
+        schools = (await session.execute(select(School_number))).scalars().all()
+        all_logins = (await session.execute(select(Logins))).scalars().all()
+        total = len(all_logins)
+        success = sum(1 for l in all_logins if l.last_login)
+        fail = total - success
+        pct = round((success / total * 100), 1) if total > 0 else 0.0
+
+        school_stats = []
+        for s in schools:
+            s_logins = [l for l in all_logins if str(l.school) == str(s.id)]
+            s_total = len(s_logins)
+            s_succ = sum(1 for l in s_logins if l.last_login)
+            s_fail = s_total - s_succ
+            s_pct = round((s_succ / s_total * 100), 1) if s_total > 0 else 0.0
+            school_stats.append({
+                "school": s,
+                "total": s_total,
+                "success": s_succ,
+                "fail": s_fail,
+                "pct": s_pct
+            })
+        return {
+            "total": total,
+            "success": success,
+            "fail": fail,
+            "pct": pct,
+            "schools": school_stats
+        }
+
+
+async def delete_school(school_id: int) -> bool:
+    async with async_session() as session:
+        from sqlalchemy import delete
+        logins = (await session.execute(select(Logins).where(Logins.school == int(school_id)))).scalars().all()
+        for l in logins:
+            await session.execute(delete(Logins_data).where(Logins_data.login_id == l.id))
+        await session.execute(delete(Logins).where(Logins.school == int(school_id)))
+        await session.execute(delete(School_number).where(School_number.id == int(school_id)))
+        await session.commit()
+        _SCHOOL_CACHE_BY_ID.pop(int(school_id), None)
+        return True
+
+
+async def get_school_grades(school_id: int) -> list[str]:
+    async with async_session() as session:
+        stmt = select(Logins.grade).where(Logins.school == int(school_id)).distinct()
+        res = await session.execute(stmt)
+        grades = [g for g in res.scalars().all() if g]
+        # Sort grades naturally, e.g. 1A, 3V, 10B
+        def sort_key(g):
+            num = ""
+            char = ""
+            for ch in g:
+                if ch.isdigit():
+                    num += ch
+                else:
+                    char += ch
+            return (int(num) if num else 0, char)
+        try:
+            return sorted(grades, key=sort_key)
+        except Exception:
+            return sorted(grades)
+
+
+async def get_class_stats(school_id: int, grade: str):
+    async with async_session() as session:
+        logins = (await session.execute(
+            select(Logins).where(
+                and_(
+                    Logins.school == int(school_id),
+                    Logins.grade == str(grade)
+                )
+            )
+        )).scalars().all()
+        total = len(logins)
+        success = sum(1 for l in logins if l.last_login)
+        fail = total - success
+        pct = round((success / total * 100), 1) if total > 0 else 0.0
+        return {
+            "total": total,
+            "success": success,
+            "fail": fail,
+            "pct": pct,
+            "logins": logins
+        }
 
 
 async def init():

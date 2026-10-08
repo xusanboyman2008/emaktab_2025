@@ -5,5 +5,7 @@ __pycache__/
 *.session
 *.log
 database.sqlite3
+database.sqlite3-shm
+database.sqlite3-wal
 database_last.json
 database_last_ready.json
