@@ -339,7 +339,14 @@ async def get_free_captcha():
     async with async_session() as session:
         stmt = select(Captcha_ids.captcha_id).where(Captcha_ids.is_occupied == False).limit(1)
         res = await session.execute(stmt)
-        return res.scalar_one_or_none()
+        cid = res.scalar_one_or_none()
+        if cid:
+            return cid
+    try:
+        from captcha_finder import get_live_captcha_id
+        return await get_live_captcha_id()
+    except Exception:
+        return None
 
 
 async def create_captcha_ids(captcha_id):
@@ -425,7 +432,13 @@ async def give_captcha_100(id=None):
         stmt = select(Captcha_ids.captcha_id).order_by(func.random()).limit(1)
         result = await session.execute(stmt)
         captcha = result.scalar_one_or_none()
-        return captcha or "f61a11f3-1cee-448c-ad2b-fd2eee8f9b2d"
+        if captcha:
+            return captcha
+    try:
+        from captcha_finder import get_live_captcha_id
+        return await get_live_captcha_id()
+    except Exception:
+        return "f61a11f3-1cee-448c-ad2b-fd2eee8f9b2d"
 
 
 async def create_logins_data(login_id, last_login, last_cookie):
