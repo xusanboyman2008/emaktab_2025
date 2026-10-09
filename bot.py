@@ -34,7 +34,7 @@ import dns_resolver  # Fast DNS resolution for login.emaktab.uz
 
 OWNER_TG_ID = 6588631008
 url = os.getenv('URL', "https://emaktab-2025.onrender.com")
-Token = os.getenv('TOKEN', "8301189313:AAEePiO5uaAMA01sbQLOts6TguUaztlbNaw")
+Token = os.getenv('TOKEN', "8301189313:AAFApmwNLY9AlccUQtfXP5PfV0kvg0RBQr8")
 
 bot = Bot(token=Token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
