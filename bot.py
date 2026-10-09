@@ -14,7 +14,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import (
-    Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove,
+    Message, ReplyKeyboardRemove,
     InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, FSInputFile, CallbackQuery
 )
 from telegraph import Telegraph
@@ -71,29 +71,48 @@ class EditLoginPwd(StatesGroup):
 
 
 # -------------------------------------------------------------------------
-# Helpers
+# Helpers & 100% Inline Keyboards
 # -------------------------------------------------------------------------
 def is_owner(tg_id: int) -> bool:
     return int(tg_id) == OWNER_TG_ID
 
 
-def main_reply_keyboard(is_admin: bool) -> ReplyKeyboardMarkup:
+def main_inline_keyboard(is_admin: bool, school_id: int = 1) -> InlineKeyboardMarkup:
+    rows = []
     if is_admin:
-        return ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="🏫 Maktablar"), KeyboardButton(text="📊 To'liq Hisobot")],
-                [KeyboardButton(text="🔄 Hozir tekshirish (/all)"), KeyboardButton(text="➕ Maktab qo'shish")],
-                [KeyboardButton(text="➕ Login qo'shish"), KeyboardButton(text="💾 DB Backup")]
-            ],
-            resize_keyboard=True
-        )
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🏫 Maktablar"), KeyboardButton(text="📊 Statistika")],
-            [KeyboardButton(text="➕ Login qo'shish"), KeyboardButton(text="ℹ️ Yordam")]
-        ],
-        resize_keyboard=True
-    )
+        rows.append([
+            InlineKeyboardButton(text="🏫 14-maktab (Statistika & Sinflar)", callback_data=f"view_sch_{school_id}")
+        ])
+        rows.append([
+            InlineKeyboardButton(text="📊 To'liq Hisobot", callback_data="main_stats"),
+            InlineKeyboardButton(text="🔄 Qayta tekshirish (/all)", callback_data="admin_run_all")
+        ])
+        rows.append([
+            InlineKeyboardButton(text="➕ Login qo'shish", callback_data="admin_add_login_start"),
+            InlineKeyboardButton(text="➕ Maktab qo'shish", callback_data="admin_add_school")
+        ])
+        rows.append([
+            InlineKeyboardButton(text="💾 DB Backup", callback_data="admin_db_backup"),
+            InlineKeyboardButton(text="ℹ️ Yordam", callback_data="main_help")
+        ])
+    else:
+        rows.append([
+            InlineKeyboardButton(text="🏫 14-maktab statistikasini ko'rish", callback_data=f"view_sch_{school_id}")
+        ])
+        rows.append([
+            InlineKeyboardButton(text="📊 Statistika", callback_data="main_stats"),
+            InlineKeyboardButton(text="➕ Login qo'shish", callback_data="admin_add_login_start")
+        ])
+        rows.append([
+            InlineKeyboardButton(text="ℹ️ Yordam", callback_data="main_help")
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def cancel_inline_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="❌ Bekor qilish", callback_data="main_menu")
+    ]])
 
 
 def grades_button(current_page: int):
@@ -122,30 +141,12 @@ def grades_button(current_page: int):
         InlineKeyboardButton(text="➡️", callback_data=f"gpage_{2 if current_page == 1 else 3 if current_page == 2 else 1}"),
     ]
     rows.append(nav_buttons)
+    rows.append([InlineKeyboardButton(text="❌ Bekor qilish", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 # -------------------------------------------------------------------------
-# Telegraph Helper (Preserved)
-# -------------------------------------------------------------------------
-async def create_page_safe(telegraph_instance, title, content):
-    while True:
-        try:
-            return await asyncio.to_thread(
-                telegraph_instance.create_page,
-                title=title,
-                author_name='eMaktab',
-                html_content=content
-            )
-        except RetryAfterError as e:
-            await asyncio.sleep(e.retry_after)
-        except Exception as e:
-            print(f"Telegraph error: {e}")
-            return {"url": ""}
-
-
-# -------------------------------------------------------------------------
-# /start Command Handler
+# Main Menu & Start Command
 # -------------------------------------------------------------------------
 @dp.message(CommandStart())
 async def start_handler(message: Message, command: CommandStart, state: FSMContext):
@@ -158,53 +159,64 @@ async def start_handler(message: Message, command: CommandStart, state: FSMConte
     )
     admin = is_owner(user_id) or (user and user.role in ("owner", "admin"))
 
-    payload = command.args
-    if payload:
-        # Deep links e.g. school link
-        if payload == 'owner':
-            users = await get_all_users()
-            for u in users:
-                if u.role in ('supporter', 'owner') or u.tg_id == OWNER_TG_ID:
-                    try:
-                        await bot.send_message(
-                            chat_id=u.tg_id,
-                            text=f'👤 <a href="tg://user?id={user_id}">Foydalanuvchi</a> maktab yaratishni so‘ramoqda.'
-                        )
-                    except Exception:
-                        pass
-            await message.answer("Siz bilan tez orada administratorlar aloqaga chiqishadi.")
-            return
-
-        if payload == 'clear':
-            await message.answer("Bosh menyu:", reply_markup=main_reply_keyboard(admin))
-            return
-
-        # School invite URL join
-        school_joined = await update_user(user_id, payload)
-        if school_joined:
-            await message.answer(
-                f"✅ Siz <b>{school_joined.place}</b> dagi <b>{school_joined.school_number}-maktab</b>ga ulandingiz!",
-                reply_markup=main_reply_keyboard(admin)
-            )
-            return
-
     greeting = (
         f"👑 <b>Xush kelibsiz, Bosh Administrator!</b>\n\n"
-        f"Tizim to'liq nazoratingiz ostida. Quyidagi tugmalar orqali maktablar, sinflar, loginlar "
-        f"va parollarni boshqarishingiz, kunlik hisobotlarni ko'rishingiz mumkin."
+        f"14-maktab tizimi to'liq nazoratingiz ostida.\n"
+        f"Quyidagi inline tugmalar orqali barcha maktablar, sinflar, loginlar va parollarni boshqarishingiz mumkin:"
     ) if admin else (
         f"👋 <b>Assalomu alaykum, {message.from_user.first_name}!</b>\n\n"
-        f"eMaktab avtomatlashtirish botiga xush kelibsiz.\n"
-        f"Quyidagi menyu orqali maktablar statistikasini kuzatishingiz mumkin."
+        f"14-maktab avtomatlashtirish botiga xush kelibsiz.\n"
+        f"Quyidagi inline tugmalar orqali statistika va ma'lumotlarni ko'rishingiz mumkin:"
     )
 
-    await message.answer(greeting, reply_markup=main_reply_keyboard(admin))
+    await message.answer(greeting, reply_markup=main_inline_keyboard(admin, school_id=1))
+
+
+@dp.callback_query(F.data == "main_menu")
+async def main_menu_callback(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    user_id = callback.from_user.id
+    admin = is_owner(user_id)
+    text = (
+        f"👑 <b>Bosh menyu:</b>\n<i>Quyidagi inline tugmalardan birini tanlang:</i>"
+    ) if admin else (
+        f"👋 <b>Bosh menyu:</b>\n<i>Quyidagi inline tugmalardan birini tanlang:</i>"
+    )
+    try:
+        await callback.message.edit_text(text, reply_markup=main_inline_keyboard(admin, school_id=1))
+    except TelegramBadRequest:
+        pass
+
+
+@dp.callback_query(F.data == "main_help")
+async def help_callback(callback: CallbackQuery):
+    admin = is_owner(callback.from_user.id)
+    text = (
+        "🤖 <b>eMaktab Avtomatlashtirish Boti (100% Inline Rejim)</b>\n\n"
+        "• <b>🏫 14-maktab</b> — Maktab va sinflar bo'yicha to'liq statistika hamda loginlar.\n"
+        "• <b>📊 Statistika</b> — Tizim bo'yicha umumiy hisobot.\n"
+        "• <b>➕ Login qo'shish</b> — Yangi login va parollarni kiritish.\n"
+    )
+    if admin:
+        text += (
+            "\n👑 <b>Bosh Administrator Imkoniyatlari:</b>\n"
+            "• Har bir sinfdagi login/parollarni ko'rish va tahrirlash\n"
+            "• Parollarni o'zgartirish va o'chirish\n"
+            "• Har bir o'quvchi hisobini alohida test qilish\n"
+            "• Har kuni ertalab 07:00 da avtomatik hisobot va DB backup olish"
+        )
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🔙 Asosiy Menyu", callback_data="main_menu")
+    ]])
+    try:
+        await callback.message.edit_text(text, reply_markup=kb)
+    except TelegramBadRequest:
+        pass
 
 
 # -------------------------------------------------------------------------
 # Schools Listing & Inspection
 # -------------------------------------------------------------------------
-@dp.message(F.text == "🏫 Maktablar")
 @dp.message(Command("schools"))
 async def list_schools_command(message: Message):
     schools = await get_all_schools()
@@ -223,9 +235,7 @@ async def list_schools_command(message: Message):
         btn_text = f"🏫 {s.school_number}-maktab ({s.place})"
         buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"view_sch_{s.id}")])
 
-    if admin:
-        buttons.append([InlineKeyboardButton(text="➕ Yangi maktab qo'shish", callback_data="admin_add_school")])
-
+    buttons.append([InlineKeyboardButton(text="🔙 Asosiy Menyu", callback_data="main_menu")])
     await message.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 
@@ -243,9 +253,7 @@ async def list_schools_callback(callback: CallbackQuery):
         btn_text = f"🏫 {s.school_number}-maktab ({s.place})"
         buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"view_sch_{s.id}")])
 
-    if admin:
-        buttons.append([InlineKeyboardButton(text="➕ Yangi maktab qo'shish", callback_data="admin_add_school")])
-
+    buttons.append([InlineKeyboardButton(text="🔙 Asosiy Menyu", callback_data="main_menu")])
     try:
         await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     except TelegramBadRequest:
@@ -272,7 +280,6 @@ async def view_school_callback(callback: CallbackQuery):
 
     lines = [
         f"🏫 <b>{school.school_number}-maktab</b> ({school.place})",
-        f"📅 Muddati: {school.expire_at.strftime('%d.%m.%Y') if school.expire_at else 'Muddatsiz'}",
         "",
         f"📊 <b>Umumiy ko'rsatkichlar:</b>",
         f"• 👥 Jami loginlar: <b>{total} ta</b>",
@@ -305,7 +312,7 @@ async def view_school_callback(callback: CallbackQuery):
 
     keyboard_rows.append([
         InlineKeyboardButton(text="🔄 Yangilash", callback_data=f"view_sch_{school_id}"),
-        InlineKeyboardButton(text="🔙 Maktablar ro'yxati", callback_data="list_schools")
+        InlineKeyboardButton(text="🔙 Asosiy Menyu", callback_data="main_menu")
     ])
 
     try:
@@ -427,7 +434,7 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
 
 
 # -------------------------------------------------------------------------
-# Owner: Single Login Inspection & Actions (View, Edit, Test, Delete)
+# Owner: Single Login Actions (View, Edit, Test, Delete)
 # -------------------------------------------------------------------------
 @dp.callback_query(F.data.startswith("vlog_"))
 async def admin_view_single_login_callback(callback: CallbackQuery):
@@ -435,7 +442,6 @@ async def admin_view_single_login_callback(callback: CallbackQuery):
         await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
         return
 
-    # format: vlog_{login_id}_{school_id}_{grade}_{page}
     parts = callback.data.split("_")
     login_id = int(parts[1])
     school_id = int(parts[2])
@@ -487,7 +493,6 @@ async def admin_test_single_login_callback(callback: CallbackQuery):
         await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
         return
 
-    # format: tlog_{login_id}_{school_id}_{grade}_{page}
     parts = callback.data.split("_")
     login_id = int(parts[1])
     school_id = int(parts[2])
@@ -501,7 +506,6 @@ async def admin_test_single_login_callback(callback: CallbackQuery):
 
     await callback.answer("⏳ eMaktab serveriga ulanilmoqda...", show_alert=False)
 
-    # Test login live
     payload = {
         login_obj.id: {
             "login_id": login_obj.id,
@@ -516,9 +520,7 @@ async def admin_test_single_login_callback(callback: CallbackQuery):
     res = await send_request_main(payload)
     succ = res.get(login_obj.id, {}).get("last_login", False)
 
-    # Re-fetch from DB
     updated_login = await get_login_by_id(login_id)
-    school = await get_school_number(id=school_id)
     status_str = "✅ Muvaffaqiyatli kirildi!" if succ else "❌ Kirib bo'lmadi (parol yoki login xato)!"
 
     text = (
@@ -553,7 +555,6 @@ async def admin_edit_pwd_prompt_callback(callback: CallbackQuery, state: FSMCont
         await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
         return
 
-    # format: epwd_{login_id}_{school_id}_{grade}_{page}
     parts = callback.data.split("_")
     login_id = int(parts[1])
     school_id = int(parts[2])
@@ -574,8 +575,8 @@ async def admin_edit_pwd_prompt_callback(callback: CallbackQuery, state: FSMCont
     )
 
     await callback.message.answer(
-        f"✏️ <b>{login_obj.username}</b> uchun yangi parolni kiriting:\n\n"
-        f"<i>(Bekor qilish uchun 'Bekor qilish' deb yozing)</i>"
+        f"✏️ <b>{login_obj.username}</b> uchun yangi parolni kiriting:",
+        reply_markup=cancel_inline_keyboard()
     )
     await callback.answer()
 
@@ -589,10 +590,6 @@ async def admin_save_new_pwd(message: Message, state: FSMContext):
     new_pwd = message.text.strip()
     data = await state.get_data()
     await state.clear()
-
-    if new_pwd.lower() in ("bekor qilish", "cancel", "/cancel"):
-        await message.answer("Amal bekor qilindi.", reply_markup=main_reply_keyboard(True))
-        return
 
     login_id = data.get("login_id")
     school_id = data.get("school_id")
@@ -610,7 +607,7 @@ async def admin_save_new_pwd(message: Message, state: FSMContext):
             ]])
         )
     else:
-        await message.answer("❌ Parolni yangilashda xatolik yuz berdi.", reply_markup=main_reply_keyboard(True))
+        await message.answer("❌ Parolni yangilashda xatolik yuz berdi.", reply_markup=main_inline_keyboard(True, school_id=1))
 
 
 @dp.callback_query(F.data.startswith("cdlog_"))
@@ -619,7 +616,6 @@ async def admin_confirm_delete_login_callback(callback: CallbackQuery):
         await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
         return
 
-    # format: cdlog_{login_id}_{school_id}_{grade}_{page}
     parts = callback.data.split("_")
     login_id = int(parts[1])
     school_id = int(parts[2])
@@ -655,7 +651,6 @@ async def admin_do_delete_login_callback(callback: CallbackQuery):
         await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
         return
 
-    # format: dolog_{login_id}_{school_id}_{grade}_{page}
     parts = callback.data.split("_")
     login_id = int(parts[1])
     school_id = int(parts[2])
@@ -665,7 +660,6 @@ async def admin_do_delete_login_callback(callback: CallbackQuery):
     await delete_login(login_id)
     await callback.answer("🗑 Login muvaffaqiyatli o'chirildi!", show_alert=True)
 
-    # Return to grade logins
     callback.data = f"agrd_{school_id}_{grade}_{page}"
     await admin_grade_logins_callback(callback)
 
@@ -687,12 +681,11 @@ async def admin_confirm_delete_school_callback(callback: CallbackQuery):
 
     text = (
         f"⚠️ <b>DIQQAT! MAKTABNI O'CHIRISH!</b>\n\n"
-        f"Haqiqatan ham <b>{school.school_number}-maktab</b>ni va unga tegishli barcha loginlarni o'chirmoqchimisiz?\n"
-        f"Bu amalni ortga qaytarib bo'lmaydi!"
+        f"Haqiqatan ham <b>{school.school_number}-maktab</b>ni va unga tegishli barcha loginlarni o'chirmoqchimisiz?"
     )
     rows = [
         [
-            InlineKeyboardButton(text="🗑 Ha, butunlay o'chirilsin", callback_data=f"dodel_sch_{school_id}"),
+            InlineKeyboardButton(text="🗑 Ha, o'chirilsin", callback_data=f"dodel_sch_{school_id}"),
             InlineKeyboardButton(text="❌ Bekor qilish", callback_data=f"view_sch_{school_id}")
         ]
     ]
@@ -710,12 +703,12 @@ async def admin_do_delete_school_callback(callback: CallbackQuery):
 
     school_id = int(callback.data.split("dodel_sch_")[1])
     await delete_school(school_id)
-    await callback.answer("🗑 Maktab va uning barcha loginlari o'chirildi!", show_alert=True)
+    await callback.answer("🗑 Maktab o'chirildi!", show_alert=True)
     await list_schools_callback(callback)
 
 
 # -------------------------------------------------------------------------
-# Owner: Re-check Specific School
+# Owner: Re-check Specific School or All Logins Inline
 # -------------------------------------------------------------------------
 @dp.callback_query(F.data.startswith("asch_chk_"))
 async def admin_check_school_callback(callback: CallbackQuery):
@@ -749,13 +742,24 @@ async def admin_check_school_callback(callback: CallbackQuery):
     await send_request_main(payload)
     await callback.answer("✅ Tekshiruv yakunlandi!", show_alert=True)
 
-    # Re-render school page
     callback.data = f"view_sch_{school_id}"
     await view_school_callback(callback)
 
 
+@dp.callback_query(F.data == "admin_run_all")
+async def admin_run_all_callback(callback: CallbackQuery):
+    if not is_owner(callback.from_user.id):
+        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
+        return
+
+    await callback.answer("⏳ Barcha maktablar loginlari tekshirilmoqda...", show_alert=False)
+    await login_schedule(callback.from_user.id)
+    await callback.answer("✅ Tekshiruv yakunlandi!", show_alert=True)
+    await main_stats_callback(callback)
+
+
 # -------------------------------------------------------------------------
-# Overall Statistics & Daily Report Builder
+# Overall Statistics & Reports
 # -------------------------------------------------------------------------
 async def generate_overall_report_content():
     stats = await get_overall_stats()
@@ -780,7 +784,6 @@ async def generate_overall_report_content():
     ]
 
     inline_buttons = []
-
     for s_info in stats["schools"]:
         s = s_info["school"]
         s_tot = s_info["total"]
@@ -801,10 +804,19 @@ async def generate_overall_report_content():
             )
         ])
 
+    inline_buttons.append([InlineKeyboardButton(text="🔙 Asosiy Menyu", callback_data="main_menu")])
     return "\n".join(lines), InlineKeyboardMarkup(inline_keyboard=inline_buttons)
 
 
-@dp.message(F.text.in_({"📊 Statistika", "📊 To'liq Hisobot"}))
+@dp.callback_query(F.data == "main_stats")
+async def main_stats_callback(callback: CallbackQuery):
+    report_text, markup = await generate_overall_report_content()
+    try:
+        await callback.message.edit_text(report_text, reply_markup=markup)
+    except TelegramBadRequest:
+        pass
+
+
 @dp.message(Command("stats"))
 async def stats_command_handler(message: Message):
     report_text, markup = await generate_overall_report_content()
@@ -845,7 +857,7 @@ async def send_json():
 
 
 # -------------------------------------------------------------------------
-# Owner: Run All Re-check (/all)
+# Owner: Run All Re-check (/all) & Backup
 # -------------------------------------------------------------------------
 async def login_schedule(user_id: int | None = None):
     all_logins = await get_all_logins()
@@ -880,99 +892,74 @@ async def login_schedule(user_id: int | None = None):
     await bulk_create_logins_data(bulk_items)
 
 
-@dp.message(F.text.in_({"/all", "🔄 Hozir tekshirish (/all)"}))
-async def all_logins_handler(message: Message):
-    if not is_owner(message.from_user.id):
-        # Allow running, but notify
-        pass
+@dp.message(Command("all"))
+async def all_logins_command(message: Message):
     msg = await message.answer("⏳ Barcha maktablar loginlarini tekshirish boshlandi...")
     await login_schedule(message.from_user.id)
     report_text, markup = await generate_overall_report_content()
     await msg.edit_text(f"✅ <b>Tekshiruv yakunlandi!</b>\n\n{report_text}", reply_markup=markup)
 
 
-# -------------------------------------------------------------------------
-# Owner: DB Backup Command
-# -------------------------------------------------------------------------
-@dp.message(F.text.in_({"💾 DB Backup", "/backup"}))
-async def db_backup_handler(message: Message):
-    if not is_owner(message.from_user.id):
-        await message.answer("🚫 Bu amal faqat Bosh Administrator uchun.")
+@dp.callback_query(F.data == "admin_db_backup")
+@dp.message(Command("backup"))
+async def db_backup_handler(event: Message | CallbackQuery):
+    user_id = event.from_user.id
+    if not is_owner(user_id):
+        if isinstance(event, CallbackQuery):
+            await event.answer("🚫 Bu amal faqat Bosh Administrator uchun.", show_alert=True)
         return
+
     if os.path.exists("database.sqlite3"):
         doc = FSInputFile("database.sqlite3")
-        await message.answer_document(doc, caption="💾 SQLite ma'lumotlar bazasi nusxasi")
+        if isinstance(event, Message):
+            await event.answer_document(doc, caption="💾 SQLite ma'lumotlar bazasi nusxasi")
+        else:
+            await event.message.answer_document(doc, caption="💾 SQLite ma'lumotlar bazasi nusxasi")
+            await event.answer()
     else:
-        await message.answer("Ma'lumotlar bazasi fayli topilmadi.")
+        if isinstance(event, CallbackQuery):
+            await event.answer("Bazani topshiriqda xatolik.", show_alert=True)
 
 
 # -------------------------------------------------------------------------
 # School Creation
 # -------------------------------------------------------------------------
-@dp.message(F.text.in_({"➕ Maktab qo'shish", "/school"}))
-async def start_add_school(message: Message, state: FSMContext):
-    if not is_owner(message.from_user.id):
-        await message.answer("🚫 Maktab qo'shish faqat Bosh Administrator uchun.")
-        return
-    await message.answer(
-        "Maktab raqamini kiriting (masalan: 24):",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="Menuga qaytish")]],
-            resize_keyboard=True
-        )
-    )
-    await state.set_state(SchoolAdd.school_number)
-
-
 @dp.callback_query(F.data == "admin_add_school")
-async def start_add_school_callback(callback: CallbackQuery, state: FSMContext):
-    if not is_owner(callback.from_user.id):
-        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
+@dp.message(Command("school"))
+async def start_add_school(event: Message | CallbackQuery, state: FSMContext):
+    user_id = event.from_user.id
+    if not is_owner(user_id):
         return
-    await callback.message.answer(
-        "Maktab raqamini kiriting (masalan: 24):",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="Menuga qaytish")]],
-            resize_keyboard=True
-        )
-    )
+    text = "Maktab raqamini kiriting (masalan: 14):"
+    if isinstance(event, Message):
+        await event.answer(text, reply_markup=cancel_inline_keyboard())
+    else:
+        await event.message.answer(text, reply_markup=cancel_inline_keyboard())
+        await event.answer()
     await state.set_state(SchoolAdd.school_number)
-    await callback.answer()
 
 
 @dp.message(SchoolAdd.school_number)
 async def process_school_number(message: Message, state: FSMContext):
-    if message.text == "Menuga qaytish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=main_reply_keyboard(True))
-        return
     if not message.text.isdigit():
-        await message.answer("Iltimos, faqat raqam kiriting:")
+        await message.answer("Iltimos, faqat raqam kiriting:", reply_markup=cancel_inline_keyboard())
         return
     await state.update_data(school_number=int(message.text))
-    await message.answer("Maktab manzilini kiriting (masalan: Toshkent shahar):")
+    await message.answer("Maktab manzilini kiriting (masalan: 14-maktab):", reply_markup=cancel_inline_keyboard())
     await state.set_state(SchoolAdd.school_place)
 
 
 @dp.message(SchoolAdd.school_place)
 async def process_school_place(message: Message, state: FSMContext):
-    if message.text == "Menuga qaytish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=main_reply_keyboard(True))
-        return
     await state.update_data(school_place=message.text.strip())
-    await message.answer("Necha kun amal qilishini kiriting (masalan: 365):")
+    await message.answer("Necha kun amal qilishini kiriting (masalan: 365):", reply_markup=cancel_inline_keyboard())
     await state.set_state(SchoolAdd.days)
 
 
 @dp.message(SchoolAdd.days)
 async def process_school_days(message: Message, state: FSMContext):
-    if message.text == "Menuga qaytish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=main_reply_keyboard(True))
-        return
     if not message.text.isdigit():
-        await message.answer("Iltimos, faqat kunlar sonini (raqam) kiriting:")
+        await message.answer("Iltimos, faqat kunlar sonini (raqam) kiriting:", reply_markup=cancel_inline_keyboard())
         return
     data = await state.get_data()
     await state.clear()
@@ -987,24 +974,35 @@ async def process_school_days(message: Message, state: FSMContext):
     await message.answer(
         f"✅ <b>{school.school_number}-maktab</b> muvaffaqiyatli yaratildi!\n\n"
         f"🔗 Qo'shilish havolasi:\n{invite_url}",
-        reply_markup=main_reply_keyboard(True)
+        reply_markup=main_inline_keyboard(True, school_id=school.id)
     )
 
 
 # -------------------------------------------------------------------------
-# Single Login Addition Flow
+# Single Login Addition Flow (100% Inline)
 # -------------------------------------------------------------------------
-@dp.message(F.text.in_({"➕ Login qo'shish", "/login"}))
-async def start_add_login(message: Message, state: FSMContext):
-    user = await create_user(tg_id=message.from_user.id)
+@dp.callback_query(F.data == "admin_add_login_start")
+@dp.message(Command("login"))
+async def start_add_login(event: Message | CallbackQuery, state: FSMContext):
+    user = await create_user(tg_id=event.from_user.id)
     schools = await get_all_schools()
     if not schools:
-        await message.answer("Avval maktab yaratilishi kerak.")
+        text = "Avval maktab yaratilishi kerak."
+        if isinstance(event, CallbackQuery):
+            await event.answer(text, show_alert=True)
+        else:
+            await event.answer(text)
         return
 
-    # Choose school
     buttons = [[InlineKeyboardButton(text=f"🏫 {s.school_number}-maktab ({s.place})", callback_data=f"sel_sch_{s.id}")] for s in schools]
-    await message.answer("Login qo'shiladigan maktabni tanlang:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    buttons.append([InlineKeyboardButton(text="❌ Bekor qilish", callback_data="main_menu")])
+    text = "Login qo'shiladigan maktabni tanlang:"
+
+    if isinstance(event, Message):
+        await event.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    else:
+        await event.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+        await event.answer()
     await state.set_state(LoginAdd.school_id)
 
 
@@ -1020,7 +1018,10 @@ async def login_choose_school(callback: CallbackQuery, state: FSMContext):
 async def login_choose_grade(callback: CallbackQuery, state: FSMContext):
     grade = callback.data.split("selgrade_")[1]
     await state.update_data(grade=grade)
-    await callback.message.edit_text(f"Tanlangan sinf: <b>{grade}</b>\n\nFoydalanuvchi loginini kiriting:\n(Masalan: xusanboyabdulxayev)")
+    await callback.message.edit_text(
+        f"Tanlangan sinf: <b>{grade}</b>\n\nFoydalanuvchi loginini kiriting:\n(Masalan: xusanboyabdulxayev)",
+        reply_markup=cancel_inline_keyboard()
+    )
     await state.set_state(LoginAdd.username)
 
 
@@ -1037,7 +1038,7 @@ async def login_grade_page(callback: CallbackQuery):
 async def login_enter_user(message: Message, state: FSMContext):
     username = message.text.strip()
     await state.update_data(username=username)
-    await message.answer(f"<code>{username}</code> uchun parolni kiriting:")
+    await message.answer(f"<code>{username}</code> uchun parolni kiriting:", reply_markup=cancel_inline_keyboard())
     await state.set_state(LoginAdd.password)
 
 
@@ -1079,23 +1080,17 @@ async def login_enter_pwd(message: Message, state: FSMContext):
     )
 
     admin = is_owner(message.from_user.id)
-    if succ:
-        await msg.edit_text(f"🎉 <b>{username}</b> muvaffaqiyatli saqlandi va tizimga kirildi! ✅")
-    else:
-        await msg.edit_text(f"⚠️ <b>{username}</b> saqlandi, lekin tizimga kirib bo'lmadi (parol xato bo'lishi mumkin) ❌")
+    text = f"🎉 <b>{username}</b> muvaffaqiyatli saqlandi va tizimga kirildi! ✅" if succ else f"⚠️ <b>{username}</b> saqlandi, lekin kirib bo'lmadi ❌"
+    await msg.edit_text(text, reply_markup=main_inline_keyboard(admin, school_id=school_id))
 
 
 # -------------------------------------------------------------------------
-# Batch Add Logins (e.g. "add user:pass, user2:pass")
+# Batch Add Logins ("add user:pass, user2:pass")
 # -------------------------------------------------------------------------
 @dp.message(F.text.startswith("add "))
 async def batch_add_handler(message: Message):
     user = await create_user(message.from_user.id)
-    school_id = user.school_id
-    if not school_id:
-        await message.answer("Iltimos, avval biror maktabga ulaning yoki adminga murojaat qiling.")
-        return
-
+    school_id = user.school_id or 1
     raw_items = message.text[4:].split(",")
     valid_entries = []
     for item in raw_items:
@@ -1104,7 +1099,7 @@ async def batch_add_handler(message: Message):
             valid_entries.append((u.strip(), p.strip()))
 
     if not valid_entries:
-        await message.answer("Format xato. Masalan: add user1:pass1, user2:pass2")
+        await message.answer("Format xato. Masalan: add user1:pass1, user2:pass2", reply_markup=cancel_inline_keyboard())
         return
 
     msg = await message.answer(f"⏳ {len(valid_entries)} ta login tekshirilmoqda...")
@@ -1137,31 +1132,11 @@ async def batch_add_handler(message: Message):
         )
 
     s_count = sum(1 for d in res.values() if d.get("last_login"))
-    await msg.edit_text(f"✅ Yakunlandi! Jami: {len(valid_entries)} ta, Kirildi: {s_count} ta, Xato: {len(valid_entries) - s_count} ta.")
-
-
-# -------------------------------------------------------------------------
-# Help & Info
-# -------------------------------------------------------------------------
-@dp.message(F.text.in_({"ℹ️ Yordam", "/help"}))
-async def help_handler(message: Message):
     admin = is_owner(message.from_user.id)
-    text = (
-        "🤖 <b>eMaktab Avtomatlashtirish Boti</b>\n\n"
-        "• <b>🏫 Maktablar</b> — Barcha maktablar va ularning umumiy muvaffaqiyat statistikasini ko'rish.\n"
-        "• <b>📊 Statistika</b> — Tizim bo'yicha to'liq hisobot.\n"
-        "• <b>➕ Login qo'shish</b> — Yangi login va parollarni tizimga kiritish.\n"
+    await msg.edit_text(
+        f"✅ Yakunlandi! Jami: {len(valid_entries)} ta, Kirildi: {s_count} ta, Xato: {len(valid_entries) - s_count} ta.",
+        reply_markup=main_inline_keyboard(admin, school_id=school_id)
     )
-    if admin:
-        text += (
-            "\n👑 <b>Bosh Administrator Imkoniyatlari:</b>\n"
-            "• Har bir maktab va sinfdagi login/parollarni ko'rish\n"
-            "• Parollarni o'zgartirish va o'chirish\n"
-            "• Har bir o'quvchi hisobini alohida test qilish\n"
-            "• Yangi maktab qo'shish va o'chirish\n"
-            "• Har kuni ertalab 07:00 da to'liq statistik hisobot va DB nusxasini olish"
-        )
-    await message.answer(text, reply_markup=main_reply_keyboard(admin))
 
 
 # -------------------------------------------------------------------------
