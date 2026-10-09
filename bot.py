@@ -46,6 +46,23 @@ except Exception as e:
     print("Telegraph init:", e)
 
 
+async def create_page_safe(telegraph_instance, title, content):
+    try:
+        page = await asyncio.to_thread(
+            telegraph_instance.create_page,
+            title=title[:60],
+            author_name='eMaktab Bot',
+            html_content=content
+        )
+        return page
+    except RetryAfterError as e:
+        await asyncio.sleep(e.retry_after)
+        return await create_page_safe(telegraph_instance, title, content)
+    except Exception as e:
+        print(f"Telegraph creation error: {e}")
+        return {"url": ""}
+
+
 # -------------------------------------------------------------------------
 # FSM States
 # -------------------------------------------------------------------------
@@ -818,44 +835,58 @@ async def generate_overall_report_content():
 async def generate_telegraph_report_url(is_admin: bool):
     all_schools = await get_all_schools()
     all_logins = await get_all_logins()
-    
-    html_parts = ["<h3>🏫 eMaktab Avtomatlashtirish Tizimi Hisoboti</h3><hr>"]
-    
+
+    html_parts = [
+        "<h3>🏫 eMaktab Avtomatlashtirish Tizimi Hisoboti</h3>",
+        f"<p>📅 Sanasi: <b>{datetime.now(ZoneInfo('Asia/Tashkent')).strftime('%d.%m.%Y %H:%M')}</b></p>",
+        "<hr>"
+    ]
+
+    total_all = len(all_logins)
+    succ_all = sum(1 for l in all_logins if l.last_login)
+    fail_all = total_all - succ_all
+    pct_all = round(succ_all / total_all * 100, 1) if total_all > 0 else 0.0
+
+    html_parts.append(
+        f"<p><b>📈 Umumiy ko'rsatkichlar:</b><br>"
+        f"• 👥 Jami loginlar: <b>{total_all} ta</b><br>"
+        f"• ✅ Muvaffaqiyatli kirilgan: <b>{succ_all} ta ({pct_all}%)</b><br>"
+        f"• ❌ Kirilmagan (xatolik): <b>{fail_all} ta</b></p><hr>"
+    )
+
     for school in (all_schools or []):
         s_logins = [l for l in all_logins if str(getattr(l, "school", "")) == str(school.id)]
         if not s_logins:
             continue
-            
+
         grouped = defaultdict(list)
         for l in s_logins:
             g_name = f"{l.grade}-sinf"
             grouped[g_name].append(l)
-            
+
         s_count = sum(1 for l in s_logins if l.last_login)
         f_count = len(s_logins) - s_count
         pct = round(s_count / len(s_logins) * 100, 1) if s_logins else 0.0
-        
+
         html_parts.append(
             f"<h4>🏫 {school.school_number}-maktab ({school.place})</h4>"
-            f"👥 Jami loginlar: {len(s_logins)} ta<br>"
-            f"✅ Kirilgan: {s_count} ta ({pct}%)<br>"
-            f"❌ Kirilmagan: {f_count} ta<br><br>"
+            f"<p>👥 Jami: <b>{len(s_logins)} ta</b> | ✅ Kirilgan: <b>{s_count} ta ({pct}%)</b> | ❌ Kirilmagan: <b>{f_count} ta</b></p>"
         )
-        
+
         for g_name in sorted(grouped.keys()):
             g_logins = grouped[g_name]
-            html_parts.append(f"<b>📚 {g_name}:</b><br>")
+            html_parts.append(f"<p><b>📚 {g_name}:</b></p><ul>")
             for idx, item in enumerate(g_logins):
                 status_str = "✅ Kirilgan" if item.last_login else "❌ Kirilmagan"
                 if is_admin:
                     html_parts.append(
-                        f"• ID: {idx+1} | 👤 <b>{item.username}</b> | 🔑 {item.password} | Holat: {status_str}<br>"
+                        f"<li>ID {idx+1}: <b>{item.username}</b> — 🔑 <code>{item.password}</code> [{status_str}]</li>"
                     )
                 else:
                     html_parts.append(
-                        f"• ID: {idx+1} | 👤 <b>{item.username}</b> | Holat: {status_str}<br>"
+                        f"<li>ID {idx+1}: <b>{item.username}</b> [{status_str}]</li>"
                     )
-            html_parts.append("<br>")
+            html_parts.append("</ul>")
         html_parts.append("<hr>")
 
     final_page = await create_page_safe(
