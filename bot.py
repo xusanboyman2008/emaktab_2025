@@ -85,14 +85,17 @@ def main_inline_keyboard(is_admin: bool, school_id: int = 1) -> InlineKeyboardMa
         ])
         rows.append([
             InlineKeyboardButton(text="📊 To'liq Hisobot", callback_data="main_stats"),
-            InlineKeyboardButton(text="🔄 Qayta tekshirish (/all)", callback_data="admin_run_all")
+            InlineKeyboardButton(text="📄 Telegraph Hisoboti", callback_data="make_telegraph_report")
         ])
         rows.append([
-            InlineKeyboardButton(text="➕ Login qo'shish", callback_data="admin_add_login_start"),
-            InlineKeyboardButton(text="➕ Maktab qo'shish", callback_data="admin_add_school")
+            InlineKeyboardButton(text="🔄 Qayta tekshirish (/all)", callback_data="admin_run_all"),
+            InlineKeyboardButton(text="➕ Login qo'shish", callback_data="admin_add_login_start")
         ])
         rows.append([
-            InlineKeyboardButton(text="💾 DB Backup", callback_data="admin_db_backup"),
+            InlineKeyboardButton(text="➕ Maktab qo'shish", callback_data="admin_add_school"),
+            InlineKeyboardButton(text="💾 DB Backup", callback_data="admin_db_backup")
+        ])
+        rows.append([
             InlineKeyboardButton(text="ℹ️ Yordam", callback_data="main_help")
         ])
     else:
@@ -101,9 +104,10 @@ def main_inline_keyboard(is_admin: bool, school_id: int = 1) -> InlineKeyboardMa
         ])
         rows.append([
             InlineKeyboardButton(text="📊 Statistika", callback_data="main_stats"),
-            InlineKeyboardButton(text="➕ Login qo'shish", callback_data="admin_add_login_start")
+            InlineKeyboardButton(text="📄 Telegraph Hisoboti", callback_data="make_telegraph_report")
         ])
         rows.append([
+            InlineKeyboardButton(text="➕ Login qo'shish", callback_data="admin_add_login_start"),
             InlineKeyboardButton(text="ℹ️ Yordam", callback_data="main_help")
         ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -804,8 +808,92 @@ async def generate_overall_report_content():
             )
         ])
 
+    inline_buttons.append([
+        InlineKeyboardButton(text="📄 Telegraph Hisoboti Yaratish", callback_data="make_telegraph_report")
+    ])
     inline_buttons.append([InlineKeyboardButton(text="🔙 Asosiy Menyu", callback_data="main_menu")])
     return "\n".join(lines), InlineKeyboardMarkup(inline_keyboard=inline_buttons)
+
+
+async def generate_telegraph_report_url(is_admin: bool):
+    all_schools = await get_all_schools()
+    all_logins = await get_all_logins()
+    
+    html_parts = ["<h3>🏫 eMaktab Avtomatlashtirish Tizimi Hisoboti</h3><hr>"]
+    
+    for school in (all_schools or []):
+        s_logins = [l for l in all_logins if str(getattr(l, "school", "")) == str(school.id)]
+        if not s_logins:
+            continue
+            
+        grouped = defaultdict(list)
+        for l in s_logins:
+            g_name = f"{l.grade}-sinf"
+            grouped[g_name].append(l)
+            
+        s_count = sum(1 for l in s_logins if l.last_login)
+        f_count = len(s_logins) - s_count
+        pct = round(s_count / len(s_logins) * 100, 1) if s_logins else 0.0
+        
+        html_parts.append(
+            f"<h4>🏫 {school.school_number}-maktab ({school.place})</h4>"
+            f"👥 Jami loginlar: {len(s_logins)} ta<br>"
+            f"✅ Kirilgan: {s_count} ta ({pct}%)<br>"
+            f"❌ Kirilmagan: {f_count} ta<br><br>"
+        )
+        
+        for g_name in sorted(grouped.keys()):
+            g_logins = grouped[g_name]
+            html_parts.append(f"<b>📚 {g_name}:</b><br>")
+            for idx, item in enumerate(g_logins):
+                status_str = "✅ Kirilgan" if item.last_login else "❌ Kirilmagan"
+                if is_admin:
+                    html_parts.append(
+                        f"• ID: {idx+1} | 👤 <b>{item.username}</b> | 🔑 {item.password} | Holat: {status_str}<br>"
+                    )
+                else:
+                    html_parts.append(
+                        f"• ID: {idx+1} | 👤 <b>{item.username}</b> | Holat: {status_str}<br>"
+                    )
+            html_parts.append("<br>")
+        html_parts.append("<hr>")
+
+    final_page = await create_page_safe(
+        telegraph,
+        title="eMaktab Tizimi Hisoboti",
+        content="".join(html_parts)
+    )
+    return final_page.get("url", "")
+
+
+@dp.callback_query(F.data == "make_telegraph_report")
+@dp.message(Command("telegraph"))
+async def telegraph_report_handler(event: Message | CallbackQuery):
+    user_id = event.from_user.id
+    admin = is_owner(user_id)
+    
+    if isinstance(event, CallbackQuery):
+        await event.answer("⏳ Telegraph hisoboti yaratilmoqda...", show_alert=False)
+        
+    url_res = await generate_telegraph_report_url(admin)
+    
+    if not url_res:
+        text = "❌ Telegraph sahifasini yaratishda xatolik yuz berdi."
+        kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Asosiy Menyu", callback_data="main_menu")]])
+    else:
+        text = f"📄 <b>Telegraph Hisoboti Tayyor!</b>\n\nQuyidagi tugmani bosib web-sahifani ochishingiz mumkin:"
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🌐 Telegraph Sahifasini Ochish", url=url_res)],
+            [InlineKeyboardButton(text="🔙 Asosiy Menyu", callback_data="main_menu")]
+        ])
+        
+    if isinstance(event, Message):
+        await event.answer(text, reply_markup=kb)
+    else:
+        try:
+            await event.message.edit_text(text, reply_markup=kb)
+        except TelegramBadRequest:
+            pass
 
 
 @dp.callback_query(F.data == "main_stats")
