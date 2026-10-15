@@ -153,9 +153,9 @@ async def main():
 
     print(f"✅ Saved {total_added} test accounts into database in {time.time() - t_db_start:.2f}s")
 
-    # Step 3: Fetch all logins from DB to test the real batch flow
-    all_logins = await get_all_logins(school2=school_id)
-    print(f"📦 Loaded {len(all_logins)} logins from DB ready for checking.")
+    # Step 3: Fetch active logins from DB to test the real batch flow
+    all_logins = await get_all_logins(school2=school_id, only_active=True)
+    print(f"📦 Loaded {len(all_logins)} active logins from DB ready for checking.")
 
     students_payload = {
         login.id: {

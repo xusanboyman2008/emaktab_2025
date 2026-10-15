@@ -411,7 +411,7 @@ async def add_captcha_id(captcha_id, tg_id, is_bot):
             await session.commit()
 
 
-async def create_login(password, username, last_login, cookie, grade: str = "", school_number_id=None, tg_id=None):
+async def create_login(password, username, last_login, cookie, grade: str = "", school_number_id=None, tg_id=None, role: str = "student"):
     async with async_session() as session:
         a = await session.execute(select(Logins).where(Logins.username == username))
         r = a.scalar_one_or_none()
@@ -421,6 +421,8 @@ async def create_login(password, username, last_login, cookie, grade: str = "", 
             if grade:
                 r.grade = grade
             r.last_login = last_login
+            if role:
+                r.role = role
             await session.commit()
             return False
 
@@ -440,7 +442,8 @@ async def create_login(password, username, last_login, cookie, grade: str = "", 
             last_login=last_login,
             last_cookie=cookie,
             school=school,
-            grade=grade or "1A"
+            grade=grade or "1A",
+            role=role or "student"
         )
         session.add(new_login)
         await session.commit()
@@ -496,18 +499,19 @@ async def bulk_create_logins_data(items: list[dict]):
 async def get_all_logins(school2=None, grade=None, only_active: bool = False, only_paid: bool = False):
     async with async_session() as session:
         # If filtering by active/allowed or paid grades, check Grade table
-        blocked_grades = set()
-        unpaid_grades = set()
+        active_grades = set()
+        paid_grades = set()
         now = datetime.now()
         if only_active or only_paid:
             g_stmt = select(Grades)
             g_res = await session.execute(g_stmt)
             for g in g_res.scalars().all():
                 is_expired = bool(g.allowed_until and g.allowed_until < now)
-                if only_active and (not g.is_allowed or is_expired):
-                    blocked_grades.add(g.grade)
-                if only_paid and g.is_paid is False:
-                    unpaid_grades.add(g.grade)
+                is_active = bool(g.is_paid or (g.is_allowed and not is_expired))
+                if is_active:
+                    active_grades.add(g.grade)
+                if g.is_paid:
+                    paid_grades.add(g.grade)
 
         conds = []
         if school2:
@@ -527,10 +531,12 @@ async def get_all_logins(school2=None, grade=None, only_active: bool = False, on
 
         filtered = []
         for l in all_l:
-            if only_active and l.grade in blocked_grades:
-                continue
-            if only_paid and l.grade in unpaid_grades:
-                continue
+            if only_active:
+                if l.grade not in active_grades:
+                    continue
+            if only_paid:
+                if l.grade not in paid_grades:
+                    continue
             filtered.append(l)
 
         return filtered
@@ -741,7 +747,7 @@ async def delete_login(login_id: int) -> bool:
         return a.rowcount > 0
 
 
-async def update_login_credentials(login_id: int, username: str = None, password: str = None, grade: str = None) -> bool:
+async def update_login_credentials(login_id: int, username: str = None, password: str = None, grade: str = None, role: str = None) -> bool:
     async with async_session() as session:
         a = await session.execute(select(Logins).where(Logins.id == int(login_id)))
         login = a.scalar_one_or_none()
@@ -752,6 +758,8 @@ async def update_login_credentials(login_id: int, username: str = None, password
                 login.password = password.strip()
             if grade:
                 login.grade = grade.strip()
+            if role:
+                login.role = role.strip()
             await session.commit()
             return True
         return False
@@ -764,11 +772,15 @@ async def get_school_stats(school_id: int):
         success = sum(1 for l in logins if l.last_login)
         fail = total - success
         pct = round((success / total * 100), 1) if total > 0 else 0.0
+        parents = sum(1 for l in logins if getattr(l, "role", None) == "parent")
+        students = total - parents
         return {
             "total": total,
             "success": success,
             "fail": fail,
             "pct": pct,
+            "students": students,
+            "parents": parents,
             "logins": logins
         }
 
@@ -777,27 +789,50 @@ async def get_overall_stats():
     async with async_session() as session:
         schools = (await session.execute(select(School_number))).scalars().all()
         all_logins = (await session.execute(select(Logins))).scalars().all()
+        now = datetime.now()
+        g_res = await session.execute(select(Grades))
+        grade_map = {g.grade: g for g in g_res.scalars().all()}
+
+        active_logins = []
+        blocked_logins = []
+        for l in all_logins:
+            g = grade_map.get(l.grade)
+            is_expired = bool(g and g.allowed_until and g.allowed_until < now)
+            is_grade_active = bool(g and (g.is_paid or (g.is_allowed and not is_expired)))
+            if is_grade_active:
+                active_logins.append(l)
+            else:
+                blocked_logins.append(l)
+
         total = len(all_logins)
-        success = sum(1 for l in all_logins if l.last_login)
-        fail = total - success
-        pct = round((success / total * 100), 1) if total > 0 else 0.0
+        active_total = len(active_logins)
+        blocked_total = len(blocked_logins)
+        success = sum(1 for l in active_logins if l.last_login)
+        fail = active_total - success
+        pct = round((success / active_total * 100), 1) if active_total > 0 else 0.0
 
         school_stats = []
         for s in schools:
-            s_logins = [l for l in all_logins if str(l.school) == str(s.id)]
-            s_total = len(s_logins)
-            s_succ = sum(1 for l in s_logins if l.last_login)
+            s_all = [l for l in all_logins if str(l.school) == str(s.id)]
+            s_active = [l for l in active_logins if str(l.school) == str(s.id)]
+            s_total = len(s_active)
+            s_succ = sum(1 for l in s_active if l.last_login)
             s_fail = s_total - s_succ
             s_pct = round((s_succ / s_total * 100), 1) if s_total > 0 else 0.0
+            s_blocked = len(s_all) - s_total
             school_stats.append({
                 "school": s,
                 "total": s_total,
+                "all_total": len(s_all),
+                "blocked": s_blocked,
                 "success": s_succ,
                 "fail": s_fail,
                 "pct": s_pct
             })
         return {
-            "total": total,
+            "total": active_total,
+            "all_total": total,
+            "blocked_total": blocked_total,
             "success": success,
             "fail": fail,
             "pct": pct,
@@ -951,8 +986,8 @@ async def get_class_stats(school_id: int, grade: str):
         success = sum(1 for l in logins if l.last_login)
         fail = total - success
         pct = round((success / total * 100), 1) if total > 0 else 0.0
-        students = sum(1 for l in logins if (getattr(l, "role", "student") or "") != "parent")
-        parents = sum(1 for l in logins if getattr(l, "role", "") == "parent")
+        parents = sum(1 for l in logins if getattr(l, "role", None) == "parent")
+        students = total - parents
         return {
             "total": total,
             "success": success,

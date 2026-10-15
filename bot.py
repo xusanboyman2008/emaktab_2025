@@ -529,9 +529,11 @@ async def view_school_callback(callback: CallbackQuery):
     pct = stats["pct"]
     fail_pct = round(100.0 - pct, 1) if total > 0 else 0.0
 
+    st_cnt = stats.get("students", total)
+    pr_cnt = stats.get("parents", 0)
     lines = [
         f"{tg_icon('school', '🏫')} <b>{school.school_number}-maktab</b> ({school.place})",
-        f"• {tg_icon('users', '👥')} Jami: <b>{total} ta</b> | {tg_icon('check', '✅')} <b>{success} ({pct}%)</b> | {tg_icon('cross', '❌')} <b>{fail}</b>",
+        f"• {tg_icon('users', '👥')} Jami: <b>{total} ta</b> (o'quvchi:{st_cnt}, ota-ona:{pr_cnt}) | {tg_icon('check', '✅')} <b>{success} ({pct}%)</b> | {tg_icon('cross', '❌')} <b>{fail}</b>",
         ""
     ]
 
@@ -862,6 +864,94 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
 # -------------------------------------------------------------------------
 # Owner: Single Login Actions (View, Edit, Test, Delete)
 # -------------------------------------------------------------------------
+_STUDENT_PROFILE_CACHE = {}
+
+async def get_student_profile_data(username: str, password: str, cookie: str = None):
+    key = username.strip().lower()
+    if key in _STUDENT_PROFILE_CACHE:
+        return _STUDENT_PROFILE_CACHE[key]
+
+    import aiohttp
+    full_name = None
+    school_name = None
+    grade_name = None
+
+    if cookie and "UZDnevnikAuth_a" in cookie:
+        try:
+            cookie_dict = {}
+            for part in cookie.split(";"):
+                if "=" in part:
+                    k, v = part.strip().split("=", 1)
+                    if v:
+                        cookie_dict[k] = v
+            timeout = aiohttp.ClientTimeout(total=4)
+            async with aiohttp.ClientSession(cookies=cookie_dict, timeout=timeout) as session:
+                async with session.get("https://emaktab.uz/marks", headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                }) as resp:
+                    if resp.status == 200:
+                        html = await resp.text()
+                        m_marks = re.search(r'window\.__MARKS__INITIAL__STATE__\s*=\s*(\{.*?\});', html)
+                        if m_marks:
+                            data = json.loads(m_marks.group(1))
+                            mems = data.get("context", {}).get("schoolMemberships", [])
+                            if mems:
+                                mem = mems[0]
+                                fn = mem.get("firstName", "")
+                                ln = mem.get("lastName", "")
+                                full_name = f"{fn} {ln}".strip()
+                                school_name = mem.get("schoolName", "")
+                                groups = mem.get("groups", [])
+                                if groups:
+                                    grade_name = groups[0].get("groupName", "")
+        except Exception:
+            pass
+
+    if not full_name:
+        try:
+            from emaktab_auto import auto_detect_login
+            res = await auto_detect_login(username, password)
+            if res.get("success"):
+                full_name = res.get("full_name")
+                school_name = res.get("school_name")
+                grade_name = res.get("grade")
+        except Exception:
+            pass
+
+    res_data = {
+        "full_name": full_name,
+        "school_name": school_name,
+        "grade": grade_name
+    }
+    if full_name:
+        _STUDENT_PROFILE_CACHE[key] = res_data
+    return res_data
+
+
+def render_single_login_text(login_obj, school_name: str, prof: dict = None) -> str:
+    prof = prof or {}
+    status_str = f"{tg_icon('check')} Muvaffaqiyatli kirilgan" if login_obj.last_login else f"{tg_icon('cross')} Kirilmagan (xato)"
+    upd_time = login_obj.updated_at.strftime("%d.%m.%Y %H:%M") if login_obj.updated_at else "Ma'lumot yo'q"
+    paid_str = f"{tg_icon('money')} To'langan {tg_icon('check')}" if getattr(login_obj, 'is_paid', True) else f"{tg_icon('cross')} To'lanmagan (qulflangan)"
+
+    student_title = prof.get("full_name") or f"{login_obj.username}"
+    display_school = prof.get("school_name") or school_name
+    grade_val = prof.get("grade") or f"{login_obj.grade}-sinf"
+    if not grade_val.endswith("-sinf") and not grade_val.endswith("sinf"):
+        grade_val = f"{grade_val}-sinf"
+
+    return (
+        f"{tg_icon('user')} <b>O'quvchi:</b> <b>{student_title}</b>\n"
+        f"🏫 <b>Maktab:</b> {display_school}\n"
+        f"📚 <b>Sinf:</b> {grade_val}\n"
+        f"• Login: <code>{login_obj.username}</code>\n"
+        f"• Parol: <code>{login_obj.password}</code>\n"
+        f"• Holat: {status_str} | {paid_str}\n"
+        f"• {tg_icon('clock')} <code>{upd_time}</code>"
+    )
+
+
 @dp.callback_query(F.data.startswith("vlog_"))
 async def admin_view_single_login_callback(callback: CallbackQuery):
     if not await is_admin_or_owner(callback.from_user.id):
@@ -881,20 +971,12 @@ async def admin_view_single_login_callback(callback: CallbackQuery):
 
     school = await get_school_number(id=school_id)
     school_name = f"{school.school_number}-maktab" if school else f"{school_id}"
-    status_str = f"{tg_icon('check')} Muvaffaqiyatli kirilgan" if login_obj.last_login else f"{tg_icon('cross')} Kirilmagan (xato)"
-    upd_time = login_obj.updated_at.strftime("%d.%m.%Y %H:%M") if login_obj.updated_at else "Ma'lumot yo'q"
 
-    paid_str = f"{tg_icon('money')} To'langan {tg_icon('check')}" if getattr(login_obj, 'is_paid', True) else f"{tg_icon('cross')} To'lanmagan (qulflangan)"
+    prof = await get_student_profile_data(login_obj.username, login_obj.password, login_obj.last_cookie)
+    text = render_single_login_text(login_obj, school_name, prof)
+
     pay_btn_text = "To'lanmagan qilish" if getattr(login_obj, 'is_paid', True) else "To'langan deb belgilash"
     pay_btn_ico = "cross" if getattr(login_obj, 'is_paid', True) else "money"
-
-    text = (
-        f"{tg_icon('user')} <b>O'quvchi:</b> {school_name} | {login_obj.grade}-sinf\n"
-        f"• Login: <code>{login_obj.username}</code>\n"
-        f"• Parol: <code>{login_obj.password}</code>\n"
-        f"• Holat: {status_str} | {paid_str}\n"
-        f"• {tg_icon('clock')} <code>{upd_time}</code>"
-    )
 
     rows = [
         [
@@ -938,20 +1020,12 @@ async def admin_toggle_login_payment_callback(callback: CallbackQuery):
     login_obj = await get_login_by_id(login_id)
     school = await get_school_number(id=school_id)
     school_name = f"{school.school_number}-maktab" if school else f"{school_id}"
-    status_str = f"{tg_icon('check')} Muvaffaqiyatli kirilgan" if login_obj.last_login else f"{tg_icon('cross')} Kirilmagan (xato)"
-    upd_time = login_obj.updated_at.strftime("%d.%m.%Y %H:%M") if login_obj.updated_at else "Ma'lumot yo'q"
 
-    paid_str = f"{tg_icon('money')} To'langan {tg_icon('check')}" if getattr(login_obj, 'is_paid', True) else f"{tg_icon('cross')} To'lanmagan (qulflangan)"
+    prof = await get_student_profile_data(login_obj.username, login_obj.password, login_obj.last_cookie)
+    text = render_single_login_text(login_obj, school_name, prof)
+
     pay_btn_text = "To'lanmagan qilish" if getattr(login_obj, 'is_paid', True) else "To'langan deb belgilash"
     pay_btn_ico = "cross" if getattr(login_obj, 'is_paid', True) else "money"
-
-    text = (
-        f"{tg_icon('user')} <b>O'quvchi:</b> {school_name} | {login_obj.grade}-sinf\n"
-        f"• Login: <code>{login_obj.username}</code>\n"
-        f"• Parol: <code>{login_obj.password}</code>\n"
-        f"• Holat: {status_str} | {paid_str}\n"
-        f"• {tg_icon('clock')} <code>{upd_time}</code>"
-    )
 
     rows = [
         [
@@ -1210,10 +1284,10 @@ async def admin_check_school_callback(callback: CallbackQuery):
 
     school_id = int(callback.data.split("asch_chk_")[1])
     school = await get_school_number(id=school_id)
-    logins = await get_all_logins(school2=school_id)
+    logins = await get_all_logins(school2=school_id, only_active=True)
 
     if not logins:
-        await callback.answer("Ushbu maktabda tekshirish uchun loginlar yo'q.", show_alert=True)
+        await callback.answer("Ushbu maktabda tekshirish uchun faol loginlar yo'q.", show_alert=True)
         return
 
     await callback.answer(f"⏳ {school.school_number}-maktab loginlari tekshirilmoqda...", show_alert=False)
@@ -1255,17 +1329,19 @@ async def admin_run_all_callback(callback: CallbackQuery):
 # -------------------------------------------------------------------------
 async def generate_overall_report_content():
     stats = await get_overall_stats()
-    total = stats["total"]
+    active_tot = stats["total"]
+    all_tot = stats.get("all_total", active_tot)
+    blocked_tot = stats.get("blocked_total", 0)
     success = stats["success"]
     fail = stats["fail"]
     pct = stats["pct"]
-    fail_pct = round(100.0 - pct, 1) if total > 0 else 0.0
+    fail_pct = round(100.0 - pct, 1) if active_tot > 0 else 0.0
 
     today_str = datetime.now(ZoneInfo("Asia/Tashkent")).strftime("%d.%m.%Y %H:%M")
 
     lines = [
         f"{tg_icon('stats', '📊')} <b>EMAKTAB TIZIMI HISOBOTI</b> ({today_str})",
-        f"• {tg_icon('users', '👥')} Jami: <b>{total} ta</b> | {tg_icon('check', '✅')} <b>{success} ({pct}%)</b> | {tg_icon('cross', '❌')} <b>{fail}</b>",
+        f"• {tg_icon('users', '👥')} Faol loginlar: <b>{active_tot} ta</b> (Qulflangan: {blocked_tot} ta) | {tg_icon('check', '✅')} <b>{success} ({pct}%)</b> | {tg_icon('cross', '❌')} <b>{fail}</b>",
         "",
         f"{tg_icon('school', '🏫')} <b>Maktablar:</b>"
     ]
@@ -1277,10 +1353,11 @@ async def generate_overall_report_content():
         s_succ = s_info["success"]
         s_fail = s_info["fail"]
         s_pct = s_info["pct"]
+        s_blk = s_info.get("blocked", 0)
 
         status_ico = tg_icon('paid', '🟢') if s_pct == 100.0 else (tg_icon('trial', '🟡') if s_pct >= 50.0 else tg_icon('failed', '🔴'))
         lines.append(
-            f"• {status_ico} <b>{s.school_number}-maktab:</b> {s_tot} ta | {tg_icon('check', '✅')} {s_succ} ({s_pct}%) | {tg_icon('cross', '❌')} {s_fail}"
+            f"• {status_ico} <b>{s.school_number}-maktab:</b> {s_tot} ta faol (qulflangan: {s_blk} ta) | {tg_icon('check', '✅')} {s_succ} ({s_pct}%) | {tg_icon('cross', '❌')} {s_fail}"
         )
         inline_buttons.append([
             make_btn(
