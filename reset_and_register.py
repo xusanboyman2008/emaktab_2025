@@ -533,16 +533,41 @@ class EMaktabResetter:
             }
             client.headers.update(sub_headers)
             sub_r = client.post("https://login.emaktab.uz/passwordchanged", data=post_data, allow_redirects=True, timeout=15)
-            if any(k in sub_r.text.lower() for k in ["o‘zgartirildi", "muvaffaqiyatli", "userfeed", "tiklash"]):
-                return True, sub_r.url, sub_r.text
-            return False, sub_r.url, sub_r.text
-        return False, r.url, r.text
+            
+            # Check success
+            if any(k in sub_r.text.lower() for k in ["o‘zgartirildi", "muvaffaqiyatli", "userfeed", "tiklash"]) or "passwordchanged" not in sub_r.url.lower():
+                return True, sub_r.url, "", False
+
+            # Detect password history constraint (e.g. cannot reuse last 3 passwords)
+            raw_low = sub_r.text.lower()
+            is_history_err = any(k in raw_low for k in [
+                "oxirgi 3", "oxirgi uch", "avvalgi", "bir xil bo‘lmasligi", "takrorlash",
+                "предыдущ", "совпадать с предыдущими", "совпадать с последними", "нельзя повторять"
+            ])
+
+            err_msg = ""
+            soup2 = BeautifulSoup(sub_r.text, "html.parser")
+            err_el = soup2.find(class_=re.compile(r"validation-summary-errors|field-validation-error|alert-danger|error-message"))
+            if err_el:
+                err_msg = err_el.text.strip()
+            if not err_msg:
+                m = re.search(r'(?:parol|пароль)[^<>\n\r]{5,120}', sub_r.text, re.IGNORECASE)
+                if m:
+                    err_msg = m.group(0).strip()
+            if not err_msg:
+                err_msg = "eMaktab parollar tarixi cheklovi: Oxirgi 3 ta parolni qayta ishlatish mumkin emas!" if is_history_err else f"Parolni o'rnatish rad etildi (HTTP {sub_r.status_code})"
+
+            return False, sub_r.url, err_msg, is_history_err
+
+        return False, r.url, "Login sahifasida Token topilmadi", False
 
     def sync_to_db(self, db_path, username, password, grade="10A", school=1, role="student"):
+        clean_grade = grade.replace("-", "").replace(" ", "").upper()
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
-        # Ensure school exists in School_number
-        sch_id = school
+        
+        # 1. Ensure school exists in School_number
+        sch_id = 1
         if isinstance(school, int):
             cur.execute("SELECT id FROM School_number WHERE id = ? OR school_number = ?", (school, school))
             s_row = cur.fetchone()
@@ -551,16 +576,38 @@ class EMaktabResetter:
             else:
                 cur.execute("INSERT INTO School_number (school_number, place) VALUES (?, ?)", (school, f"{school}-maktab"))
                 sch_id = cur.lastrowid
+        else:
+            cur.execute("SELECT id FROM School_number LIMIT 1")
+            s_row = cur.fetchone()
+            if s_row:
+                sch_id = s_row[0]
 
-        cur.execute("SELECT id FROM Logins WHERE username = ?", (username,))
+        # 2. Ensure Grade exists in Grade table with trial
+        cur.execute("SELECT id FROM Grade WHERE UPPER(REPLACE(grade, '-', '')) = ?", (clean_grade,))
+        g_row = cur.fetchone()
+        if not g_row:
+            cur.execute("INSERT INTO Grade (grade, is_allowed, is_paid, allowed_until) VALUES (?, 1, 0, datetime('now', '+7 days'))", (clean_grade,))
+
+        # 3. Insert or Update in Logins table
+        cur.execute("SELECT id FROM Logins WHERE username = ?", (username.strip(),))
         row = cur.fetchone()
         if row:
-            cur.execute("UPDATE Logins SET password = ?, grade = ?, last_login = 1, role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (password, grade, role, row[0]))
+            lid = row[0]
+            cur.execute("""
+                UPDATE Logins 
+                SET school = ?, password = ?, grade = ?, last_login = 1, role = ?, is_paid = 1, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = ?
+            """, (sch_id, password.strip(), clean_grade, role, lid))
         else:
             cur.execute("""
-                INSERT INTO Logins (school, username, password, grade, last_login, role, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 1, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """, (sch_id, username, password, grade, role))
+                INSERT INTO Logins (school, username, password, grade, last_login, role, is_paid, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 1, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """, (sch_id, username.strip(), password.strip(), clean_grade, role))
+            lid = cur.lastrowid
+
+        # 4. Record history in Logins_data
+        cur.execute("INSERT INTO Logins_data (login_id, last_login, created_at) VALUES (?, 1, CURRENT_TIMESTAMP)", (lid,))
+        
         conn.commit()
         conn.close()
 
@@ -585,9 +632,9 @@ class EMaktabResetter:
         if not temp_pwd:
             return False, f"Failed to extract temporary password for {login} (HTTP {status})", info
 
-        ok, final_url, _ = self.activate_student_account(login, temp_pwd, new_password, user_id=p_uid, name=p_name)
+        ok, final_url, err_msg, is_history_err = self.activate_student_account(login, temp_pwd, new_password, user_id=p_uid, name=p_name)
         if not ok:
-            return False, f"Activation failed for {login} (at {final_url})", info
+            return False, f"Activation failed for {login}: {err_msg}", {"error": err_msg, "is_history": is_history_err}
 
         self.sync_to_db(db_path, login, new_password, grade, school, role=role)
         return True, f"Success: {login} reset and set to {new_password}", info
@@ -711,13 +758,14 @@ class EMaktabResetter:
         if progress_callback:
             progress_callback(stats)
 
+        history_error_count = 0
         for idx, acc in enumerate(target_accounts, 1):
             login = acc.get("login")
             person_id = acc.get("person_id")
             cid = acc.get("class_id")
             cname = acc.get("class_name", "")
             role = acc.get("role", "student")
-            clean_grade = cname.replace("-", "").upper()
+            clean_grade = cname.replace("-", "").replace(" ", "").upper()
 
             stats["done_accounts"] = idx
             if role == "student":
@@ -735,11 +783,24 @@ class EMaktabResetter:
                 print(f"SKIPPING PROTECTED TEACHER: {login}")
                 continue
 
-            ok, msg, _ = self.process_person(person_id, cid, new_password, db_path, clean_grade, sch_num, user_id=acc_uid, name=acc_name, role=role)
+            ok, msg, res_info = self.process_person(person_id, cid, new_password, db_path, clean_grade, sch_num, user_id=acc_uid, name=acc_name, role=role)
             if ok:
                 stats["success_count"] += 1
             else:
                 stats["fail_count"] += 1
+                is_hist = False
+                if isinstance(res_info, dict):
+                    is_hist = res_info.get("is_history", False)
+                if is_hist:
+                    history_error_count += 1
+                    # If first 2 accounts fail with history constraint (or on small list, 1), abort early!
+                    if history_error_count >= 2 or (total_accounts <= 2 and history_error_count >= 1):
+                        stats["abort_reason"] = "history_error"
+                        stats["abort_message"] = f"eMaktab xavfsizlik cheklovi: '{new_password}' paroli ushbu hisoblarda oxirgi 3 marta ishlatilgan parollar ro'yxatida mavjud! eMaktab qoidasiga binoan oxirgi 3 ta paroldan birini qayta ishlatish mumkin emas."
+                        stats["is_complete"] = True
+                        if progress_callback:
+                            progress_callback(stats)
+                        break
 
             if progress_callback and (idx % 2 == 0 or idx == total_accounts):
                 progress_callback(stats)

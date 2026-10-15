@@ -2669,6 +2669,13 @@ async def teacher_pwd_default_callback(callback: CallbackQuery, state: FSMContex
     await prepare_teacher_review_screen(callback.message, state, "12345678a")
 
 
+@dp.callback_query(TeacherResetStates.entering_new_password, F.data.startswith("tchr_pwd_quick_"))
+async def teacher_pwd_quick_callback(callback: CallbackQuery, state: FSMContext):
+    new_pwd = callback.data.replace("tchr_pwd_quick_", "")
+    await callback.answer(f"Tanlandi: {new_pwd}")
+    await prepare_teacher_review_screen(callback.message, state, new_pwd)
+
+
 @dp.message(TeacherResetStates.entering_new_password, F.text)
 async def teacher_pwd_text_handler(message: Message, state: FSMContext):
     new_pwd = message.text.strip()
@@ -2855,10 +2862,9 @@ async def teacher_back_to_mode_callback(callback: CallbackQuery, state: FSMConte
 
 async def execute_teacher_reset_process(message: Message, state: FSMContext, new_pwd: str):
     data = await state.get_data()
-    await state.clear()
 
-    t_user = data["teacher_user"]
-    t_pass = data["teacher_pass"]
+    t_user = data.get("teacher_user")
+    t_pass = data.get("teacher_pass")
     s_id = data.get("school_id", "1000006479820")
     s_name = data.get("school_name", "Maktab")
     target_mode = data.get("target_mode", "both")
@@ -2872,6 +2878,7 @@ async def execute_teacher_reset_process(message: Message, state: FSMContext, new
         target_accounts = resetter_init.get_target_accounts(selected_classes, mode=target_mode)
 
     if not target_accounts:
+        await state.clear()
         await message.answer("❌ Yangilanadigan hisoblar topilmadi.")
         return
 
@@ -2936,31 +2943,88 @@ async def execute_teacher_reset_process(message: Message, state: FSMContext, new
     try:
         final_stats = await asyncio.to_thread(run_worker)
 
-        user_id = message.chat.id
-        admin = is_owner(user_id)
-        all_schools = await get_all_schools()
+        # 1. Check if aborted due to eMaktab 3-password history constraint
+        if final_stats.get("abort_reason") == "history_error":
+            await state.set_state(TeacherResetStates.entering_new_password)
+            await state.update_data(
+                teacher_user=t_user,
+                teacher_pass=t_pass,
+                school_id=s_id,
+                school_name=s_name,
+                target_mode=target_mode,
+                mode_label=mode_label,
+                target_accounts=target_accounts,
+                selected_classes=selected_classes
+            )
 
-        final_text = (
-            f"{tg_icon('check', '🎉')} <b>Parollarni yangilash muvaffaqiyatli yakunlandi!</b>\n\n"
-            f"{tg_icon('school', '🏫')} <b>Maktab:</b> {s_name}\n"
-            f"{tg_icon('books', '📚')} <b>Sinflar ({total_classes} ta):</b> {classes_names}\n"
-            f"🎯 <b>Toifa:</b> {mode_label}\n"
-            f"{tg_icon('lock', '🔐')} <b>Yangi parol:</b> <code>{new_pwd}</code>\n\n"
-            f"👥 <b>Jami yangilangan hisoblar:</b> <b>{final_stats['success_count']} ta</b>\n"
-            f"🎓 <b>O'quvchilar:</b> {final_stats['done_students']}/{final_stats['total_students']}\n"
-            f"👨‍👩‍👦 <b>Ota-onalar:</b> {final_stats['done_parents']}/{final_stats['total_parents']}\n"
-        )
-        if final_stats["fail_count"] > 0:
-            final_text += f"❌ <b>Jami xatoliklar:</b> {final_stats['fail_count']} ta\n"
-        final_text += (
-            "\n🛡 <i>Barcha o'qituvchi hisoblari mutlaqo tegilmasdan saqlandi!</i>\n"
-            "<i>Hisoblar bot bazasida muvaffaqiyatli yangilandi va faollashtirildi!</i>"
-        )
+            abort_kb = InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(text="12345678b", callback_data="tchr_pwd_quick_12345678b"),
+                    InlineKeyboardButton(text="12345678c", callback_data="tchr_pwd_quick_12345678c")
+                ],
+                [
+                    InlineKeyboardButton(text="Maktab2026!", callback_data="tchr_pwd_quick_Maktab2026!"),
+                    InlineKeyboardButton(text="Emaktab777", callback_data="tchr_pwd_quick_Emaktab777")
+                ],
+                [InlineKeyboardButton(text="❌ Jarayonni bekor qilish", callback_data="tchr_cancel")]
+            ])
 
-        await status_msg.edit_text(
-            final_text,
-            reply_markup=main_inline_keyboard(admin, schools=all_schools, is_owner_user=admin)
-        )
+            abort_text = (
+                f"⚠️ <b>eMaktab parollar tarixi cheklovi aniqlandi!</b>\n\n"
+                f"❌ Kiritilgan <code>{new_pwd}</code> paroli ushbu hisoblarda <b>oxirgi 3 marta ishlatilgan parollar</b> ro'yxatida mavjud bo'lgani sababli eMaktab qabul qilmadi.\n\n"
+                f"🛡 <b>eMaktab xavfsizlik qoidasi:</b> Oxirgi 3 ta paroldan birini qayta qo'yish taqiqlangan.\n\n"
+                f"✍️ <b>Iltimos, boshqa yangi parol kiriting:</b>\n"
+                f"<i>(Matn orqali yangi parol yozing yoki yuqoridagi tezkor variantlardan birini bosing)</i>"
+            )
+            await status_msg.edit_text(abort_text, reply_markup=abort_kb)
+            return
+
+        # Success path: clear state
+        await state.clear()
+
+        single_grade = selected_classes[0]["name"].replace("-", "").replace(" ", "").upper() if len(selected_classes) == 1 else ""
+
+        if final_stats["success_count"] > 0:
+            final_text = (
+                f"{tg_icon('check', '🎉')} <b>Parollarni yangilash muvaffaqiyatli yakunlandi!</b>\n\n"
+                f"{tg_icon('school', '🏫')} <b>Maktab:</b> {s_name}\n"
+                f"{tg_icon('books', '📚')} <b>Sinflar ({total_classes} ta):</b> {classes_names}\n"
+                f"🎯 <b>Toifa:</b> {mode_label}\n"
+                f"{tg_icon('lock', '🔐')} <b>Yangi parol:</b> <code>{new_pwd}</code>\n\n"
+                f"👥 <b>Jami yangilangan hisoblar:</b> <b>{final_stats['success_count']} ta</b>\n"
+                f"🎓 <b>O'quvchilar:</b> {final_stats['done_students']}/{final_stats['total_students']}\n"
+                f"👨‍👩‍👦 <b>Ota-onalar:</b> {final_stats['done_parents']}/{final_stats['total_parents']}\n"
+            )
+            if final_stats["fail_count"] > 0:
+                final_text += f"❌ <b>Jami xatoliklar:</b> {final_stats['fail_count']} ta\n"
+            final_text += (
+                f"\n💾 <b>Barcha yangilangan hisoblar ({final_stats['success_count']} ta) bot bazasiga (Logins jadvaliga) to'liq qo'shildi va faollashtirildi!</b>\n"
+                "🛡 <i>Barcha o'qituvchi hisoblari mutlaqo tegilmasdan saqlandi!</i>"
+            )
+
+            buttons = []
+            if single_grade:
+                buttons.append([make_btn(f"📋 {single_grade}-sinf barcha login va parollari", callback_data=f"allgrd_1_{single_grade}", emoji="memo")])
+            buttons.append([make_btn("🏫 Maktablar bo'limi", callback_data="schools_list", emoji="school")])
+            buttons.append([make_btn("Asosiy Menyu", callback_data="main_menu", emoji="back")])
+
+            await status_msg.edit_text(
+                final_text,
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+            )
+        else:
+            retry_kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔄 Boshqa parol bilan qayta urinish", callback_data="teacher_reset_start")],
+                [InlineKeyboardButton(text="Asosiy Menyu", callback_data="main_menu")]
+            ])
+            await status_msg.edit_text(
+                f"❌ <b>Hech qanday hisobning paroli yangilanmadi!</b>\n\n"
+                f"⚠️ <b>Jami xatolar:</b> {final_stats['fail_count']} ta\n"
+                "Bunga eMaktab parollar tarixi yoki vaqtinchalik cheklov sabab bo'lgan bo'lishi mumkin.\n\n"
+                "Iltimos, boshqa yangi parol bilan qayta urinib ko'ring:",
+                reply_markup=retry_kb
+            )
+
     except Exception as e:
         await status_msg.edit_text(f"❌ <b>Jarayonda xatolik yuz berdi:</b> {e}")
 
