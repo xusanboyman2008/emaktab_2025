@@ -1,5 +1,6 @@
 import re
 import io
+import html
 from gemini_ai import (
     ask_gemini, extract_logins_from_image, extract_logins_from_document,
     extract_logins_from_text, process_audio_voice,
@@ -793,6 +794,131 @@ async def admin_school_grades_callback(callback: CallbackQuery):
         pass
 
 
+@dp.callback_query(F.data.startswith("allgrd_"))
+@dp.callback_query(F.data.startswith("agrd_all_"))
+async def admin_grade_all_logins_and_passwords_callback(callback: CallbackQuery):
+    if not await is_admin_or_owner(callback.from_user.id):
+        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
+        return
+
+    # format: allgrd_{school_id}_{grade} or agrd_all_{school_id}_{grade}
+    parts = callback.data.split("_")
+    if callback.data.startswith("allgrd_"):
+        school_id = int(parts[1])
+        grade = parts[2]
+    else:
+        school_id = int(parts[2])
+        grade = parts[3]
+
+    school = await get_school_number(id=school_id)
+    school_name = f"{school.school_number}-maktab" if school else f"{school_id}"
+    all_logins_in_grade = await get_all_logins(school2=school_id, grade=grade)
+
+    if not all_logins_in_grade:
+        await callback.answer("Ushbu sinfda loginlar topilmadi.", show_alert=True)
+        return
+
+    await callback.answer("⏳ Login va parollar saralanmoqda...", show_alert=False)
+
+    async def fetch_item(l):
+        prof = await get_student_profile_data(l.username, l.password, l.last_cookie, fast_only=True)
+        name = prof.get("full_name") or format_name_from_username(l.username)
+        role = getattr(l, "role", "student") or "student"
+        return {
+            "login": l.username,
+            "password": l.password,
+            "role": role,
+            "name": name,
+            "last_login": l.last_login
+        }
+
+    items = await asyncio.gather(*[fetch_item(l) for l in all_logins_in_grade])
+
+    students = [x for x in items if x["role"] != "parent"]
+    parents = [x for x in items if x["role"] == "parent"]
+
+    # Sorted alphabetically by name within each group
+    students.sort(key=lambda x: str(x["name"]).lower())
+    parents.sort(key=lambda x: str(x["name"]).lower())
+
+    text_parts = [
+        f"{tg_icon('memo')} <b>{school_name} | {grade}-sinf barcha login va parollari:</b>",
+        f"• {tg_icon('users')} Jami hisoblar: <b>{len(items)} ta</b> (🎓 O'quvchilar: {len(students)}, 👨‍👩‍👦 Ota-onalar: {len(parents)})\n"
+    ]
+
+    if students:
+        text_parts.append(f"🎓 <b>O'QUVCHILAR (STUDENTS) — {len(students)} ta:</b>")
+        for idx, s in enumerate(students, 1):
+            ico = tg_icon('check', '✅') if s.get('last_login') else tg_icon('cross', '❌')
+            s_name = html.escape(str(s['name']))
+            s_login = html.escape(str(s['login']))
+            s_pass = html.escape(str(s['password']))
+            text_parts.append(
+                f"{idx}. <b>{s_name}</b> {ico}\n"
+                f"   • Login: <code>{s_login}</code>\n"
+                f"   • Parol: <code>{s_pass}</code>"
+            )
+        text_parts.append("")
+
+    if parents:
+        text_parts.append(f"👨‍👩‍👦 <b>OTA-ONALAR (PARENTS) — {len(parents)} ta:</b>")
+        for idx, p in enumerate(parents, 1):
+            ico = tg_icon('check', '✅') if p.get('last_login') else tg_icon('cross', '❌')
+            p_name = html.escape(str(p['name']))
+            p_login = html.escape(str(p['login']))
+            p_pass = html.escape(str(p['password']))
+            text_parts.append(
+                f"{idx}. <b>{p_name}</b> {ico}\n"
+                f"   • Login: <code>{p_login}</code>\n"
+                f"   • Parol: <code>{p_pass}</code>"
+            )
+
+    full_text = "\n".join(text_parts)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [make_btn("⬅️ Sinf ro'yxatiga qaytish", callback_data=f"agrd_{school_id}_{grade}_1", emoji="books")],
+        [make_btn("🏫 Maktabga", callback_data=f"view_sch_{school_id}", emoji="school")]
+    ])
+
+    if len(full_text) <= 4000:
+        try:
+            await callback.message.edit_text(full_text, reply_markup=kb)
+        except Exception:
+            try:
+                await callback.message.answer(full_text, reply_markup=kb)
+            except Exception:
+                await callback.message.answer(re.sub(r'<[^>]+>', '', full_text), reply_markup=kb, parse_mode=None)
+    else:
+        try:
+            await callback.message.edit_text(
+                f"📋 <b>{school_name} | {grade}-sinf hisoblari ({len(items)} ta):</b>\n<i>Quyida to'liq ro'yxat chiqarilmoqda...</i>"
+            )
+        except Exception:
+            pass
+
+        chunks = []
+        cur = []
+        cur_len = 0
+        for block in full_text.split("\n\n"):
+            if cur_len + len(block) + 2 > 3500:
+                if cur:
+                    chunks.append("\n\n".join(cur))
+                cur = [block]
+                cur_len = len(block)
+            else:
+                cur.append(block)
+                cur_len += len(block) + 2
+        if cur:
+            chunks.append("\n\n".join(cur))
+
+        for i, ch in enumerate(chunks):
+            reply_markup = kb if i == len(chunks) - 1 else None
+            try:
+                await callback.message.answer(ch, reply_markup=reply_markup)
+            except Exception:
+                await callback.message.answer(re.sub(r'<[^>]+>', '', ch), reply_markup=reply_markup, parse_mode=None)
+
+
 @dp.callback_query(F.data.startswith("agrd_"))
 async def admin_grade_logins_callback(callback: CallbackQuery):
     if not await is_admin_or_owner(callback.from_user.id):
@@ -801,6 +927,9 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
 
     # format: agrd_{school_id}_{grade}_{page}
     parts = callback.data.split("_")
+    if len(parts) < 4 or not parts[1].isdigit():
+        return
+
     school_id = int(parts[1])
     grade = parts[2]
     page = int(parts[3])
@@ -855,7 +984,7 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
         rows.append(nav_row)
 
     rows.append([
-        make_btn("📋 Barcha login va parollar", callback_data=f"agrd_all_{school_id}_{grade}", emoji="memo")
+        make_btn("📋 Barcha login va parollar", callback_data=f"allgrd_{school_id}_{grade}", emoji="memo")
     ])
     rows.append([
         make_btn("Sinflarga qaytish", callback_data=f"asch_gr_{school_id}", emoji="books"),
@@ -871,112 +1000,22 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
         pass
 
 
-@dp.callback_query(F.data.startswith("agrd_all_"))
-async def admin_grade_all_logins_and_passwords_callback(callback: CallbackQuery):
-    if not await is_admin_or_owner(callback.from_user.id):
-        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
-        return
-
-    # format: agrd_all_{school_id}_{grade}
-    parts = callback.data.split("_")
-    school_id = int(parts[2])
-    grade = parts[3]
-
-    school = await get_school_number(id=school_id)
-    school_name = f"{school.school_number}-maktab" if school else f"{school_id}"
-    all_logins_in_grade = await get_all_logins(school2=school_id, grade=grade)
-
-    if not all_logins_in_grade:
-        await callback.answer("Ushbu sinfda loginlar topilmadi.", show_alert=True)
-        return
-
-    await callback.answer("⏳ Login va parollar saralanmoqda...", show_alert=False)
-
-    async def fetch_item(l):
-        prof = await get_student_profile_data(l.username, l.password, l.last_cookie)
-        name = prof.get("full_name") or l.username
-        role = getattr(l, "role", "student") or "student"
-        return {
-            "login": l.username,
-            "password": l.password,
-            "role": role,
-            "name": name,
-            "last_login": l.last_login
-        }
-
-    items = await asyncio.gather(*[fetch_item(l) for l in all_logins_in_grade])
-
-    students = [x for x in items if x["role"] != "parent"]
-    parents = [x for x in items if x["role"] == "parent"]
-
-    # Sorted alphabetically by name within each group
-    students.sort(key=lambda x: x["name"].lower())
-    parents.sort(key=lambda x: x["name"].lower())
-
-    text_parts = [
-        f"{tg_icon('memo')} <b>{school_name} | {grade}-sinf barcha login va parollari:</b>",
-        f"• {tg_icon('users')} Jami hisoblar: <b>{len(items)} ta</b> (🎓 O'quvchilar: {len(students)}, 👨‍👩‍👦 Ota-onalar: {len(parents)})\n"
-    ]
-
-    if students:
-        text_parts.append(f"🎓 <b>O'QUVCHILAR (STUDENTS) — {len(students)} ta:</b>")
-        for idx, s in enumerate(students, 1):
-            ico = tg_icon('check', '✅') if s.get('last_login') else tg_icon('cross', '❌')
-            text_parts.append(
-                f"{idx}. <b>{s['name']}</b> {ico}\n"
-                f"   • Login: <code>{s['login']}</code>\n"
-                f"   • Parol: <code>{s['password']}</code>"
-            )
-        text_parts.append("")
-
-    if parents:
-        text_parts.append(f"👨‍👩‍👦 <b>OTA-ONALAR (PARENTS) — {len(parents)} ta:</b>")
-        for idx, p in enumerate(parents, 1):
-            ico = tg_icon('check', '✅') if p.get('last_login') else tg_icon('cross', '❌')
-            text_parts.append(
-                f"{idx}. <b>{p['name']}</b> {ico}\n"
-                f"   • Login: <code>{p['login']}</code>\n"
-                f"   • Parol: <code>{p['password']}</code>"
-            )
-
-    full_text = "\n".join(text_parts)
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [make_btn("⬅️ Sinf ro'yxatiga qaytish", callback_data=f"agrd_{school_id}_{grade}_1", emoji="books")],
-        [make_btn("🏫 Maktabga", callback_data=f"view_sch_{school_id}", emoji="school")]
-    ])
-
-    if len(full_text) <= 4000:
-        try:
-            await callback.message.edit_text(full_text, reply_markup=kb)
-        except TelegramBadRequest:
-            await callback.message.answer(full_text, reply_markup=kb)
-    else:
-        chunks = []
-        cur = []
-        cur_len = 0
-        for block in full_text.split("\n\n"):
-            if cur_len + len(block) + 2 > 3800:
-                chunks.append("\n\n".join(cur))
-                cur = [block]
-                cur_len = len(block)
-            else:
-                cur.append(block)
-                cur_len += len(block) + 2
-        if cur:
-            chunks.append("\n\n".join(cur))
-
-        for i, ch in enumerate(chunks):
-            reply_markup = kb if i == len(chunks) - 1 else None
-            await callback.message.answer(ch, reply_markup=reply_markup)
-
-
 # -------------------------------------------------------------------------
 # Owner: Single Login Actions (View, Edit, Test, Delete)
 # -------------------------------------------------------------------------
 _STUDENT_PROFILE_CACHE = {}
 
-async def get_student_profile_data(username: str, password: str, cookie: str = None):
+def format_name_from_username(username: str) -> str:
+    cleaned = re.sub(r'\d+$', '', username.strip())
+    parts = cleaned.replace("_", ".").split(".")
+    words = [p.capitalize() for p in parts if p]
+    if len(words) >= 2:
+        return f"{words[0]} {words[1]}"
+    elif len(words) == 1:
+        return words[0]
+    return username
+
+async def get_student_profile_data(username: str, password: str, cookie: str = None, fast_only: bool = False):
     key = username.strip().lower()
     if key in _STUDENT_PROFILE_CACHE:
         return _STUDENT_PROFILE_CACHE[key]
@@ -994,15 +1033,15 @@ async def get_student_profile_data(username: str, password: str, cookie: str = N
                     k, v = part.strip().split("=", 1)
                     if v:
                         cookie_dict[k] = v
-            timeout = aiohttp.ClientTimeout(total=4)
+            timeout = aiohttp.ClientTimeout(total=2.5)
             async with aiohttp.ClientSession(cookies=cookie_dict, timeout=timeout) as session:
                 async with session.get("https://emaktab.uz/marks", headers={
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                 }) as resp:
                     if resp.status == 200:
-                        html = await resp.text()
-                        m_marks = re.search(r'window\.__MARKS__INITIAL__STATE__\s*=\s*(\{.*?\});', html)
+                        html_text = await resp.text()
+                        m_marks = re.search(r'window\.__MARKS__INITIAL__STATE__\s*=\s*(\{.*?\});', html_text)
                         if m_marks:
                             data = json.loads(m_marks.group(1))
                             mems = data.get("context", {}).get("schoolMemberships", [])
@@ -1018,7 +1057,7 @@ async def get_student_profile_data(username: str, password: str, cookie: str = N
         except Exception:
             pass
 
-    if not full_name:
+    if not full_name and not fast_only:
         try:
             from emaktab_auto import auto_detect_login
             res = await auto_detect_login(username, password)
@@ -1028,6 +1067,9 @@ async def get_student_profile_data(username: str, password: str, cookie: str = N
                 grade_name = res.get("grade")
         except Exception:
             pass
+
+    if not full_name:
+        full_name = format_name_from_username(username)
 
     res_data = {
         "full_name": full_name,
