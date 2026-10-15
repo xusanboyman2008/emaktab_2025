@@ -64,14 +64,27 @@ def tool_get_failed_logins(sinf: str = None):
         return {"error": str(e)}
 
 def tool_find_student_login(username: str):
-    """Bazada ma'lum bir login bo'yicha o'quvchi ma'lumotlarini qidiradi."""
+    """Bazada ma'lum bir login bo'yicha o'quvchi ma'lumotlarini qidiradi (faqat administrator)."""
     try:
         con = sqlite3.connect(DB_PATH)
         cur = con.cursor()
-        cur.execute("SELECT id, school, username, grade, last_login, updated_at FROM Logins WHERE username LIKE ?;", (f"%{username.strip()}%",))
-        rows = [{"id": r[0], "maktab_id": r[1], "login": r[2], "sinf": r[3], "kirilgan": bool(r[4]), "yangilangan": str(r[5])} for r in cur.fetchall()]
+        cur.execute("SELECT id, school, username, grade, last_login, password, is_paid, updated_at FROM Logins WHERE username LIKE ?;", (f"%{username.strip()}%",))
+        rows = [{"id": r[0], "maktab_id": r[1], "login": r[2], "sinf": r[3], "kirilgan": bool(r[4]), "parol": r[5], "tolangan": bool(r[6]), "yangilangan": str(r[7])} for r in cur.fetchall()]
         con.close()
         return {"topilganlar": rows, "soni": len(rows)}
+    except Exception as e:
+        return {"error": str(e)}
+
+def tool_get_grade_logins(grade: str):
+    """Muayyan sinfdagi barcha loginlar, parollar, to'lov va holatini qaytaradi (faqat administrator)."""
+    try:
+        g_clean = grade.strip().upper().replace("-", "").replace(" ", "")
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        cur.execute("SELECT id, username, password, grade, last_login, is_paid, updated_at FROM Logins WHERE REPLACE(UPPER(grade), '-', '') = ? ORDER BY username;", (g_clean,))
+        rows = [{"id": r[0], "login": r[1], "parol": r[2], "sinf": r[3], "kirilgan": bool(r[4]), "tolangan": bool(r[5]), "yangilangan": str(r[6])} for r in cur.fetchall()]
+        con.close()
+        return {"sinf": g_clean, "jami_loginlar": len(rows), "loginlar": rows}
     except Exception as e:
         return {"error": str(e)}
 
@@ -184,15 +197,29 @@ def tool_set_bot_setting(key: str, value: str):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-READ_FUNCTION_DECLARATIONS = [
+PUBLIC_FUNCTION_DECLARATIONS = [
     {
         "name": "tool_get_system_stats",
-        "description": "Tizimdagi barcha maktablar, sinflar kesimida statistika, kirilgan va kirilmagan loginlar sonini olish.",
+        "description": "Tizimdagi barcha maktablar va sinflar kesimida umumiy statistika (kirilgan va kirilmagan loginlar soni, qaysi sinflar kirganligi). Hech qanday shaxsiy login yoki parol berilmaydi, faqat umumiy hisobot.",
         "parameters": {"type": "OBJECT", "properties": {}}
+    }
+]
+
+ADMIN_FUNCTION_DECLARATIONS = [
+    {
+        "name": "tool_get_grade_logins",
+        "description": "Faqat administrator uchun: Muayyan sinfdagi (masalan '7A') barcha o'quvchi va ota-onalar loginlari, parollari, to'lov va kirish holatlarini ro'yxat qilib ko'rish.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "grade": {"type": "STRING", "description": "Sinf nomi (masalan: '7A', '4B')"}
+            },
+            "required": ["grade"]
+        }
     },
     {
         "name": "tool_get_failed_logins",
-        "description": "Tizimga kirishda xatolik berayotgan yoki paroli noto'g'ri bo'lgan loginlar va sinflarni ko'rish.",
+        "description": "Faqat administrator uchun: Tizimga kirishda xatolik berayotgan loginlar, ularning parollari va sinflarini ko'rish.",
         "parameters": {
             "type": "OBJECT",
             "properties": {
@@ -202,7 +229,7 @@ READ_FUNCTION_DECLARATIONS = [
     },
     {
         "name": "tool_find_student_login",
-        "description": "Bazada o'quvchi loginini qidirish, uning sinfi va kirish holatini tekshirish.",
+        "description": "Faqat administrator uchun: Bazada o'quvchi loginini qidirish, uning paroli, sinfi, to'lovi va holatini tekshirish.",
         "parameters": {
             "type": "OBJECT",
             "properties": {
@@ -210,10 +237,7 @@ READ_FUNCTION_DECLARATIONS = [
             },
             "required": ["username"]
         }
-    }
-]
-
-MUTATION_FUNCTION_DECLARATIONS = [
+    },
     {
         "name": "tool_update_student_password",
         "description": "Faqat administrator uchun: Biror loginning parolini yangilash.",
@@ -277,13 +301,7 @@ MUTATION_FUNCTION_DECLARATIONS = [
     }
 ]
 
-MUTATION_TOOL_NAMES = {
-    "tool_update_student_password",
-    "tool_set_login_payment_status",
-    "tool_set_grade_status",
-    "tool_delete_student_login",
-    "tool_set_bot_setting"
-}
+ADMIN_TOOL_NAMES = {tool["name"] for tool in ADMIN_FUNCTION_DECLARATIONS}
 
 SYSTEM_INSTRUCTION = (
     "Siz eMaktab tizimi bo'yicha aqlli yordamchisiz. "
@@ -310,22 +328,26 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
     user_text = f"{context_prefix}{prompt}"
 
     if is_admin:
-        tools_schema = [{"function_declarations": READ_FUNCTION_DECLARATIONS + MUTATION_FUNCTION_DECLARATIONS}]
+        tools_schema = [{"function_declarations": PUBLIC_FUNCTION_DECLARATIONS + ADMIN_FUNCTION_DECLARATIONS}]
         system_inst = (
             SYSTEM_INSTRUCTION + "\n"
-            "DIQQAT: Ushbu foydalanuvchi tizim ADMINISTRATORI hisoblanadi. "
-            "Siz uning topshirig'i bo'yicha ma'lumotlar bazasini ko'rish va unga O'ZGARTIRISH kiritish "
-            "(parolni yangilash, to'lov/ruxsat holatini sozlash, loginni o'chirish, sozlamalarni yangilash) VAKOLATIGA EGASIZ. "
-            "Administrator o'zgartirish so'raganda, tegishli funksiyani (tool) chaqirib amalga oshiring va natijani ixcham xabar qiling."
+            "DIQQAT: Ushbu foydalanuvchi tizim ADMINISTRATORI (Owner/Admin) hisoblanadi.\n"
+            "Siz uning topshirig'i bo'yicha barcha ma'lumotlar bazasini ko'rish (o'quvchi va ota-onalar loginlari, parollari, sinflar ro'yxati, to'lovlar, xatolar) "
+            "va unga har qanday O'ZGARTIRISH kiritish (parolni yangilash, to'lov/ruxsat holatini sozlash, loginni o'chirish, sozlamalarni yangilash) CHEKSIZ VAKOLATIGA EGASIZ. "
+            "Administrator so'ragan har qanday ma'lumotni to'liq bering va buyurgan o'zgartirishlarini bajaring."
         )
     else:
-        tools_schema = [{"function_declarations": READ_FUNCTION_DECLARATIONS}]
+        tools_schema = [{"function_declarations": PUBLIC_FUNCTION_DECLARATIONS}]
         system_inst = (
             SYSTEM_INSTRUCTION + "\n"
-            "DIQQAT: Ushbu foydalanuvchi ODDIY FOYDALANUVCHI (administrator EMAS). "
-            "Siz FAQAT O'QISH/AXBOROT REJIMIDASIZ. Tizim parametrlarini, parollarni, loginlarni yoki ma'lumotlar bazasini o'zgartirish QAT'IYAN TAQIQLANGAN. "
-            "Hech qanday o'zgartirish funksiyasi sizga berilmagan. Agar foydalanuvchi biror ma'lumotni o'zgartirishni, to'lovni yoqishni, parolni almashtirishni yoki o'chirishni so'rasa, "
-            "buni faqat administrator qila olishini xushmuomala tushuntiring va rad eting."
+            "DIQQAT: Ushbu foydalanuvchi ODDIY FOYDALANUVCHI (administrator EMAS).\n"
+            "QAT'IY XAVFSIZLIK VA SHAXSIY MA'LUMOTLAR MAXFIYLIGI QOIDALARI:\n"
+            "1. Foydalanuvchilar faqat o'z login va parollarini tizimga kiritishlari mumkin (botga login va parol yuborish orqali).\n"
+            "2. BAZADAGI O'QUVCHILAR HAQIDAGI SHAXSIY MA'LUMOTLARNI (LOGINLAR, PAROLLAR, ISMLAR) USHBU FOYDALANUVCHIGA O'QIB BERISH YOKI KO'RSATISH MUTLAQO TAQIQLANADI! "
+            "Agar foydalanuvchi biror o'quvchi, uning logini yoki paroli haqida so'rasa, 'Shaxsiy ma'lumotlar va login/parollar maxfiy bo'lib, ularni faqat administrator ko'rishi mumkin' deb rad eting.\n"
+            "3. Siz oddiy foydalanuvchiga FAQAT umumiy statistika (masalan: qaysi sinflar kirgan, nechta login faol, umumiy tizim holati) haqida javob bera olasiz (`tool_get_system_stats` orqali). "
+            "Hech qanday shaxsiy login yoki parol aytilmaydi.\n"
+            "4. Bazaga o'zgartirish kiritish (parol almashtirish, o'chirish, to'lovni yoqish) qat'iyan taqiqlangan, faqat administrator uchun mumkin."
         )
 
     for api_key in get_ordered_api_keys():
@@ -373,11 +395,16 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
                                 fname = fc.get("name")
                                 fargs = fc.get("args", {})
                                 
-                                # Execute local tool with strict admin security check
-                                if fname in MUTATION_TOOL_NAMES and not is_admin:
-                                    f_result = {"success": False, "error": "Ruxsat berilmagan! Tizimga o'zgartirish kiritish faqat administrator uchun mumkin."}
+                                # Execute local tool with strict privacy & admin security check
+                                if not is_admin and fname != "tool_get_system_stats":
+                                    f_result = {
+                                        "success": False,
+                                        "error": "Ruxsat berilmagan! O'quvchilar shaxsiy ma'lumotlari, login/parollar va o'zgartirishlar faqat administrator uchun ochiq. Siz faqat umumiy statistikani ko'rishingiz mumkin."
+                                    }
                                 elif fname == "tool_get_system_stats":
                                     f_result = tool_get_system_stats()
+                                elif fname == "tool_get_grade_logins":
+                                    f_result = tool_get_grade_logins(**fargs)
                                 elif fname == "tool_get_failed_logins":
                                     f_result = tool_get_failed_logins(**fargs)
                                 elif fname == "tool_find_student_login":
