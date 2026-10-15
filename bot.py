@@ -819,20 +819,24 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
     start_idx = (page - 1) * page_size
     current_page_logins = all_logins_in_grade[start_idx:start_idx + page_size]
 
+    s_cnt = sum(1 for x in all_logins_in_grade if getattr(x, "role", "student") != "parent")
+    p_cnt = len(all_logins_in_grade) - s_cnt
+
     text_lines = [
         f"{tg_icon('school')} <b>{school.school_number}-maktab</b> | {tg_icon('books')} <b>{grade}-sinf</b>",
-        f"{tg_icon('users')} Jami o'quvchilar: <b>{len(all_logins_in_grade)} ta</b>",
+        f"{tg_icon('users')} Jami hisoblar: <b>{len(all_logins_in_grade)} ta</b> (o'quvchi: {s_cnt}, ota-ona: {p_cnt})",
         f"{tg_icon('memo')} Sahifa: <b>{page}/{total_pages}</b>",
         "",
-        "<i>Boshqarish (parolni ko'rish, o'zgartirish, test qilish) uchun o'quvchini tanlang:</i>"
+        "<i>Boshqarish (parolni ko'rish, o'zgartirish, test qilish) uchun hisobni tanlang:</i>"
     ]
 
     rows = []
     for l in current_page_logins:
         status_ico = "check" if l.last_login else "cross"
+        role_label = "parent" if getattr(l, "role", "student") == "parent" else "student"
         rows.append([
             make_btn(
-                f"{l.username}",
+                f"{l.username} ({role_label})",
                 callback_data=f"vlog_{l.id}_{school_id}_{grade}_{page}",
                 emoji=status_ico
             )
@@ -935,14 +939,18 @@ def render_single_login_text(login_obj, school_name: str, prof: dict = None) -> 
     upd_time = login_obj.updated_at.strftime("%d.%m.%Y %H:%M") if login_obj.updated_at else "Ma'lumot yo'q"
     paid_str = f"{tg_icon('money')} To'langan {tg_icon('check')}" if getattr(login_obj, 'is_paid', True) else f"{tg_icon('cross')} To'lanmagan (qulflangan)"
 
-    student_title = prof.get("full_name") or f"{login_obj.username}"
+    is_parent = getattr(login_obj, "role", "student") == "parent"
+    role_uz = "Ota-ona" if is_parent else "O'quvchi"
+    role_en = "parent" if is_parent else "student"
+
+    person_title = prof.get("full_name") or f"{login_obj.username}"
     display_school = prof.get("school_name") or school_name
     grade_val = prof.get("grade") or f"{login_obj.grade}-sinf"
     if not grade_val.endswith("-sinf") and not grade_val.endswith("sinf"):
         grade_val = f"{grade_val}-sinf"
 
     return (
-        f"{tg_icon('user')} <b>O'quvchi:</b> <b>{student_title}</b>\n"
+        f"{tg_icon('user')} <b>{role_uz} ({role_en}):</b> <b>{person_title}</b>\n"
         f"🏫 <b>Maktab:</b> {display_school}\n"
         f"📚 <b>Sinf:</b> {grade_val}\n"
         f"• Login: <code>{login_obj.username}</code>\n"
