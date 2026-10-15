@@ -18,7 +18,16 @@ from sqlalchemy.orm import DeclarativeBase
 
 uzb_tz = timezone(timedelta(hours=5))
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///database.sqlite3")
+_DB_FILE = (
+    "/home/ubuntu/emaktab_2025/database.sqlite3"
+    if os.path.exists("/home/ubuntu/emaktab_2025/database.sqlite3")
+    else (
+        "/home/xusanboyman/emaktab_2025/database.sqlite3"
+        if os.path.exists("/home/xusanboyman/emaktab_2025/database.sqlite3")
+        else os.path.abspath("database.sqlite3")
+    )
+)
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{_DB_FILE}")
 
 # SQLite Performance Pragma configuration (WAL mode, fast sync, RAM cache)
 @event.listens_for(Engine, "connect")
@@ -56,6 +65,9 @@ class Grades(Base):
     __tablename__ = "Grade"
     id = Column(Integer, autoincrement=True, primary_key=True)
     grade = Column(Text, index=True)
+    is_allowed = Column(Boolean, default=False, index=True)
+    is_paid = Column(Boolean, default=False, index=True)
+    allowed_until = Column(DateTime, nullable=True)
 
 
 class School_number(Base):
@@ -103,8 +115,10 @@ class Logins(Base):
     grade = Column(Text, nullable=False, index=True)
     last_cookie = Column(Text, nullable=True)
     last_login = Column(Boolean, index=True)
+    role = Column(String, default="student", index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(uzb_tz))
+    is_paid = Column(Boolean, default=False, index=True)
 
 
 class Logins_data(Base):
@@ -116,7 +130,13 @@ class Logins_data(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
 
 
-TABLES = [User, School_number, Captcha_ids, Logins, Logins_data]
+class BotSetting(Base):
+    __tablename__ = "BotSetting"
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+
+
+TABLES = [Grades, User, School_number, Captcha_ids, Logins, Logins_data, BotSetting]
 
 
 async def generate_unique_url(length: int = 15):
@@ -473,22 +493,47 @@ async def bulk_create_logins_data(items: list[dict]):
         return True
 
 
-async def get_all_logins(school2=None, grade=None):
+async def get_all_logins(school2=None, grade=None, only_active: bool = False, only_paid: bool = False):
     async with async_session() as session:
+        # If filtering by active/allowed or paid grades, check Grade table
+        blocked_grades = set()
+        unpaid_grades = set()
+        now = datetime.now()
+        if only_active or only_paid:
+            g_stmt = select(Grades)
+            g_res = await session.execute(g_stmt)
+            for g in g_res.scalars().all():
+                is_expired = bool(g.allowed_until and g.allowed_until < now)
+                if only_active and (not g.is_allowed or is_expired):
+                    blocked_grades.add(g.grade)
+                if only_paid and g.is_paid is False:
+                    unpaid_grades.add(g.grade)
+
+        conds = []
         if school2:
-            if grade:
-                stmt = select(Logins).where(
-                    and_(
-                        Logins.school == int(school2),
-                        Logins.grade == str(grade)
-                    )
-                )
-            else:
-                stmt = select(Logins).where(Logins.school == int(school2))
+            conds.append(Logins.school == int(school2))
+        if grade:
+            conds.append(Logins.grade == str(grade))
+        if only_paid:
+            conds.append(Logins.is_paid == True)
+
+        if conds:
+            stmt = select(Logins).where(and_(*conds))
         else:
             stmt = select(Logins)
-        a = await session.execute(stmt)
-        return a.scalars().all()
+
+        res = await session.execute(stmt)
+        all_l = res.scalars().all()
+
+        filtered = []
+        for l in all_l:
+            if only_active and l.grade in blocked_grades:
+                continue
+            if only_paid and l.grade in unpaid_grades:
+                continue
+            filtered.append(l)
+
+        return filtered
 
 
 async def update_logins(login_id, last_login, last_cookie, password=None):
@@ -531,6 +576,131 @@ async def get_all_captcha():
         return a.scalar() or 0
 
 
+_SETTINGS_CACHE: dict[str, str] = {}
+
+
+async def get_setting(key: str, default: str = "") -> str:
+    if key in _SETTINGS_CACHE:
+        return _SETTINGS_CACHE[key]
+    async with async_session() as session:
+        res = await session.execute(select(BotSetting).where(BotSetting.key == key))
+        obj = res.scalar_one_or_none()
+        if obj:
+            _SETTINGS_CACHE[key] = obj.value
+            return obj.value
+        return default
+
+
+async def set_setting(key: str, value: str) -> None:
+    _SETTINGS_CACHE[key] = str(value)
+    async with async_session() as session:
+        res = await session.execute(select(BotSetting).where(BotSetting.key == key))
+        obj = res.scalar_one_or_none()
+        if obj:
+            obj.value = str(value)
+        else:
+            obj = BotSetting(key=key, value=str(value))
+            session.add(obj)
+        await session.commit()
+
+
+_ADMIN_CACHE: set[int] = {6588631008}
+
+
+async def load_admin_cache() -> set[int]:
+    global _ADMIN_CACHE
+    async with async_session() as session:
+        res = await session.execute(select(User.tg_id).where(User.role.in_(["owner", "admin"])))
+        admins = {int(x) for x in res.scalars().all() if x}
+        admins.add(6588631008)
+        _ADMIN_CACHE = admins
+        return _ADMIN_CACHE
+
+
+async def is_admin_or_owner(tg_id: int) -> bool:
+    if int(tg_id) == 6588631008:
+        return True
+    if int(tg_id) in _ADMIN_CACHE:
+        return True
+    async with async_session() as session:
+        res = await session.execute(select(User).where(User.tg_id == int(tg_id)))
+        user = res.scalar_one_or_none()
+        if user and user.role in ("owner", "admin"):
+            _ADMIN_CACHE.add(int(tg_id))
+            return True
+    return False
+
+
+async def get_all_admins() -> list[dict]:
+    await load_admin_cache()
+    async with async_session() as session:
+        res = await session.execute(select(User).where(User.tg_id.in_(_ADMIN_CACHE)))
+        users = res.scalars().all()
+        result = []
+        found_owner = False
+        for u in users:
+            is_own = (int(u.tg_id) == 6588631008 or u.role == "owner")
+            if is_own:
+                found_owner = True
+            result.append({
+                "tg_id": u.tg_id,
+                "first_name": u.first_name or "",
+                "username": u.username or "",
+                "role": "owner" if is_own else (u.role or "admin")
+            })
+        if not found_owner:
+            result.insert(0, {
+                "tg_id": 6588631008,
+                "first_name": "Bosh Administrator",
+                "username": "xusanboyman200",
+                "role": "owner"
+            })
+        return result
+
+
+async def add_admin(tg_id: int, username: str = "", first_name: str = "") -> bool:
+    async with async_session() as session:
+        res = await session.execute(select(User).where(User.tg_id == int(tg_id)))
+        user = res.scalar_one_or_none()
+        if user:
+            user.role = "admin"
+            if username:
+                user.username = username
+            if first_name:
+                user.first_name = first_name
+        else:
+            new_u = User(
+                tg_id=int(tg_id),
+                username=username,
+                first_name=first_name,
+                role="admin"
+            )
+            session.add(new_u)
+        await session.commit()
+        _ADMIN_CACHE.add(int(tg_id))
+        return True
+
+
+async def remove_admin(tg_id: int) -> bool:
+    if int(tg_id) == 6588631008:
+        return False
+    async with async_session() as session:
+        res = await session.execute(select(User).where(User.tg_id == int(tg_id)))
+        user = res.scalar_one_or_none()
+        if user:
+            user.role = "user"
+            await session.commit()
+        _ADMIN_CACHE.discard(int(tg_id))
+        return True
+
+
+async def get_user_by_username(username: str):
+    clean = username.lstrip("@").strip().lower()
+    async with async_session() as session:
+        res = await session.execute(select(User).where(func.lower(User.username) == clean))
+        return res.scalar_one_or_none()
+
+
 async def create_or_change_user_role(user_tg, role='admin'):
     async with async_session() as session:
         a = await session.execute(select(User).where(User.tg_id == user_tg))
@@ -538,6 +708,10 @@ async def create_or_change_user_role(user_tg, role='admin'):
         if r:
             r.role = role
             await session.commit()
+            if role in ('owner', 'admin'):
+                _ADMIN_CACHE.add(int(user_tg))
+            else:
+                _ADMIN_CACHE.discard(int(user_tg))
             return True
         return False
 
@@ -649,7 +823,6 @@ async def get_school_grades(school_id: int) -> list[str]:
         stmt = select(Logins.grade).where(Logins.school == int(school_id)).distinct()
         res = await session.execute(stmt)
         grades = [g for g in res.scalars().all() if g]
-        # Sort grades naturally, e.g. 1A, 3V, 10B
         def sort_key(g):
             num = ""
             char = ""
@@ -663,6 +836,105 @@ async def get_school_grades(school_id: int) -> list[str]:
             return sorted(grades, key=sort_key)
         except Exception:
             return sorted(grades)
+
+
+async def get_grade_info(grade_name: str):
+    async with async_session() as session:
+        stmt = select(Grades).where(Grades.grade == str(grade_name))
+        res = await session.execute(stmt)
+        return res.scalar_one_or_none()
+
+
+async def ensure_grade_trial(grade_name: str) -> bool:
+    """
+    If a newly detected grade does not exist yet in Grade table,
+    register it automatically with configured free trial days (is_allowed=True, allowed_until=now + trial_days, is_paid=False).
+    """
+    trial_str = await get_setting("trial_days", "7")
+    trial_days = int(trial_str) if trial_str.isdigit() else 7
+    async with async_session() as session:
+        stmt = select(Grades).where(Grades.grade == str(grade_name))
+        res = await session.execute(stmt)
+        g = res.scalar_one_or_none()
+        if not g:
+            new_g = Grades(
+                grade=str(grade_name),
+                is_allowed=True,
+                is_paid=False,
+                allowed_until=datetime.now() + timedelta(days=trial_days)
+            )
+            session.add(new_g)
+            await session.commit()
+            return True
+        return False
+
+
+async def toggle_grade_allowed(grade_name: str) -> bool:
+    trial_str = await get_setting("trial_days", "7")
+    trial_days = int(trial_str) if trial_str.isdigit() else 7
+    async with async_session() as session:
+        stmt = select(Grades).where(Grades.grade == str(grade_name))
+        res = await session.execute(stmt)
+        g = res.scalar_one_or_none()
+        if g:
+            new_val = not bool(g.is_allowed)
+            g.is_allowed = new_val
+            if new_val:
+                g.allowed_until = None if g.is_paid else (datetime.now() + timedelta(days=trial_days))
+            else:
+                g.allowed_until = None
+            await session.commit()
+            return new_val
+        else:
+            new_g = Grades(grade=grade_name, is_allowed=True, is_paid=False, allowed_until=datetime.now() + timedelta(days=trial_days))
+            session.add(new_g)
+            await session.commit()
+            return True
+
+
+async def toggle_grade_paid(grade_name: str) -> bool:
+    async with async_session() as session:
+        stmt = select(Grades).where(Grades.grade == str(grade_name))
+        res = await session.execute(stmt)
+        g = res.scalar_one_or_none()
+        if g:
+            new_val = not bool(g.is_paid)
+            g.is_paid = new_val
+            if new_val:
+                # If marked as PAID: unlimited access! Enable access and remove timer
+                g.is_allowed = True
+                g.allowed_until = None
+            else:
+                # If marked as UNPAID: start 1 week trial limit if allowed, or keep existing
+                if g.is_allowed:
+                    g.allowed_until = datetime.now() + timedelta(days=7)
+            await session.commit()
+            return new_val
+        else:
+            new_g = Grades(grade=grade_name, is_allowed=True, is_paid=True, allowed_until=None)
+            session.add(new_g)
+            await session.commit()
+            return True
+
+
+async def toggle_login_paid(login_id: int) -> bool:
+    async with async_session() as session:
+        stmt = select(Logins).where(Logins.id == int(login_id))
+        res = await session.execute(stmt)
+        l = res.scalar_one_or_none()
+        if l:
+            l.is_paid = not bool(l.is_paid)
+            new_val = l.is_paid
+            await session.commit()
+            return new_val
+        return False
+
+
+async def get_all_grade_controls():
+    async with async_session() as session:
+        stmt = select(Grades)
+        res = await session.execute(stmt)
+        return res.scalars().all()
 
 
 async def get_class_stats(school_id: int, grade: str):
@@ -679,11 +951,15 @@ async def get_class_stats(school_id: int, grade: str):
         success = sum(1 for l in logins if l.last_login)
         fail = total - success
         pct = round((success / total * 100), 1) if total > 0 else 0.0
+        students = sum(1 for l in logins if (getattr(l, "role", "student") or "") != "parent")
+        parents = sum(1 for l in logins if getattr(l, "role", "") == "parent")
         return {
             "total": total,
             "success": success,
             "fail": fail,
             "pct": pct,
+            "students": students,
+            "parents": parents,
             "logins": logins
         }
 
@@ -725,3 +1001,28 @@ if __name__ == "__main__":
     except RuntimeError as e:
         if "Event loop is closed" not in str(e):
             raise
+
+
+async def get_or_create_school_by_number(school_number: int, place: str = None) -> School_number:
+    """Finds existing school by school_number or creates one automatically."""
+    async with async_session() as session:
+        stmt = select(School_number).where(School_number.school_number == int(school_number))
+        res = await session.execute(stmt)
+        school = res.scalar_one_or_none()
+        if school:
+            return school
+        
+        url = await generate_unique_url()
+        p = place or f"{school_number}-maktab"
+        new_school = School_number(
+            school_number=int(school_number),
+            school_url=url,
+            place=p,
+            is_paid=False
+        )
+        session.add(new_school)
+        await session.commit()
+        await session.refresh(new_school)
+        _SCHOOL_CACHE_BY_ID[new_school.id] = new_school
+        _SCHOOL_CACHE_BY_URL[new_school.school_url] = new_school
+        return new_school
