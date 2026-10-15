@@ -197,6 +197,247 @@ def tool_set_bot_setting(key: str, value: str):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+def tool_extend_grade_access(grade: str, days: int = 30):
+    """Sinf to'lovini berilgan kunga uzaytiradi (standart 30 kun), is_paid va is_allowed ni yoqadi, sinfdagi barcha loginlarni faollashtiradi."""
+    try:
+        g_clean = grade.strip().upper().replace("-", "").replace(" ", "")
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        
+        cur.execute("SELECT id FROM Grade WHERE UPPER(grade) = ?;", (g_clean,))
+        row = cur.fetchone()
+        if not row:
+            cur.execute(
+                "INSERT INTO Grade (grade, is_allowed, is_paid, allowed_until) VALUES (?, 1, 1, datetime('now', ?));",
+                (g_clean, f"+{days} days")
+            )
+        else:
+            cur.execute(
+                "UPDATE Grade SET is_allowed = 1, is_paid = 1, allowed_until = datetime(COALESCE(allowed_until, 'now'), ?) WHERE UPPER(grade) = ?;",
+                (f"+{days} days", g_clean)
+            )
+        
+        cur.execute("UPDATE Logins SET is_paid = 1, updated_at = datetime('now') WHERE REPLACE(UPPER(grade), '-', '') = ?;", (g_clean,))
+        updated_logins = cur.rowcount
+        
+        cur.execute("SELECT allowed_until FROM Grade WHERE UPPER(grade) = ?;", (g_clean,))
+        until_row = cur.fetchone()
+        exp_date = until_row[0] if until_row else "Noma'lum"
+
+        con.commit()
+        con.close()
+        return {
+            "success": True,
+            "sinf": g_clean,
+            "uzaytirilgan_kun": days,
+            "yangi_muddati": str(exp_date),
+            "faollashtirilgan_loginlar": updated_logins,
+            "message": f"{g_clean}-sinf to'lovi va ruxsati {days} kunga uzaytirildi (amal qilish muddati: {exp_date}). Sinfdagi {updated_logins} ta login faollashtirildi."
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def tool_bulk_update_passwords_in_grade(grade: str, new_password: str):
+    """Muayyan sinfdagi (masalan '7A') barcha o'quvchi va ota-onalar parolini bir martada yangi umumiy parolga o'zgartiradi."""
+    try:
+        g_clean = grade.strip().upper().replace("-", "").replace(" ", "")
+        p_clean = new_password.strip()
+        if len(p_clean) < 6:
+            return {"success": False, "error": "Yangi parol kamida 6 belgidan iborat bo'lishi kerak."}
+        
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        cur.execute(
+            "UPDATE Logins SET password = ?, last_cookie = NULL, updated_at = datetime('now') WHERE REPLACE(UPPER(grade), '-', '') = ?;",
+            (p_clean, g_clean)
+        )
+        count = cur.rowcount
+        con.commit()
+        con.close()
+        if count == 0:
+            return {"success": False, "error": f"{g_clean}-sinfida hech qanday login topilmadi."}
+        return {
+            "success": True,
+            "sinf": g_clean,
+            "yangi_parol": p_clean,
+            "yangilangan_loginlar_soni": count,
+            "message": f"{g_clean}-sinfidagi barcha {count} ta login paroli muvaffaqiyatli '{p_clean}' ga o'zgartirildi va sessiyalari yangilandi."
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def tool_add_student_login(username: str, password: str, grade: str, school_number: int = 14, role: str = "student"):
+    """Bazada yangi o'quvchi yoki ota-ona loginini ro'yxatdan o'tkazadi / qo'shadi."""
+    try:
+        u_clean = username.strip()
+        p_clean = password.strip()
+        g_clean = grade.strip().upper().replace("-", "").replace(" ", "")
+        r_clean = role.strip().lower()
+        if r_clean not in ["student", "parent"]:
+            r_clean = "student"
+        
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        
+        cur.execute("SELECT id FROM School_number WHERE school_number = ? LIMIT 1;", (school_number,))
+        s_row = cur.fetchone()
+        if s_row:
+            school_id = s_row[0]
+        else:
+            cur.execute("SELECT id FROM School_number LIMIT 1;")
+            s_row = cur.fetchone()
+            school_id = s_row[0] if s_row else 1
+            
+        cur.execute("SELECT id FROM Logins WHERE username = ?;", (u_clean,))
+        existing = cur.fetchone()
+        if existing:
+            lid = existing[0]
+            cur.execute(
+                "UPDATE Logins SET password = ?, grade = ?, school = ?, is_paid = 1, role = ?, last_login = 1, updated_at = datetime('now') WHERE id = ?;",
+                (p_clean, g_clean, school_id, r_clean, lid)
+            )
+            msg = f"{u_clean} logini allaqachon mavjud edi, ma'lumotlari yangilandi ({g_clean}-sinf, {r_clean})."
+        else:
+            cur.execute(
+                "INSERT INTO Logins (school, username, password, grade, last_login, created_at, updated_at, is_paid, role) VALUES (?, ?, ?, ?, 1, datetime('now'), datetime('now'), 1, ?);",
+                (school_id, u_clean, p_clean, g_clean, r_clean)
+            )
+            lid = cur.lastrowid
+            cur.execute(
+                "INSERT INTO Logins_data (login_id, last_cookie, last_login, created_at) VALUES (?, NULL, 1, datetime('now'));",
+                (lid,)
+            )
+            msg = f"{u_clean} ({g_clean}-sinf, {r_clean}) muvaffaqiyatli bazaga qo'shildi."
+            
+        con.commit()
+        con.close()
+        return {"success": True, "login_id": lid, "username": u_clean, "grade": g_clean, "message": msg}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def tool_clean_grade_logins(grade: str, failed_only: bool = True):
+    """Sinfdagi loginlarni tozalaydi (failed_only=True bo'lsa faqat xato berayotganlarni, False bo'lsa barcha loginlarni o'chiradi)."""
+    try:
+        g_clean = grade.strip().upper().replace("-", "").replace(" ", "")
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        
+        if failed_only:
+            cur.execute("SELECT id FROM Logins WHERE REPLACE(UPPER(grade), '-', '') = ? AND last_login = 0;", (g_clean,))
+        else:
+            cur.execute("SELECT id FROM Logins WHERE REPLACE(UPPER(grade), '-', '') = ?;", (g_clean,))
+            
+        ids = [r[0] for r in cur.fetchall()]
+        if not ids:
+            con.close()
+            target_str = "xato berayotgan" if failed_only else "hech qanday"
+            return {"success": True, "ochirilgan_soni": 0, "message": f"{g_clean}-sinfida {target_str} loginlar topilmadi."}
+            
+        placeholders = ','.join('?' for _ in ids)
+        cur.execute(f"DELETE FROM Logins_data WHERE login_id IN ({placeholders});", ids)
+        cur.execute(f"DELETE FROM Logins WHERE id IN ({placeholders});", ids)
+        deleted_count = cur.rowcount
+        con.commit()
+        con.close()
+        
+        target_desc = "ishlamayotgan (xato) loginlar" if failed_only else "barcha loginlar"
+        return {
+            "success": True,
+            "sinf": g_clean,
+            "ochirilgan_soni": deleted_count,
+            "message": f"{g_clean}-sinfidagi {deleted_count} ta {target_desc} bazadan tozalandi."
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def tool_reset_grade_login_status(grade: str):
+    """Sinfdagi barcha loginlarning sessiya va kuki holatini qayta tekshirishga tayyorlaydi (last_cookie ni tozalaydi)."""
+    try:
+        g_clean = grade.strip().upper().replace("-", "").replace(" ", "")
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        cur.execute("UPDATE Logins SET last_cookie = NULL, updated_at = datetime('now') WHERE REPLACE(UPPER(grade), '-', '') = ?;", (g_clean,))
+        count = cur.rowcount
+        con.commit()
+        con.close()
+        return {
+            "success": True,
+            "sinf": g_clean,
+            "yangilangan_loginlar": count,
+            "message": f"{g_clean}-sinfidagi {count} ta login sessiyasi tozalandi va qayta tekshirishga tayyorlandi."
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def tool_get_school_detailed_report(school_number: int = 14):
+    """Maktab bo'yicha to'liq va kengaytirilgan analitik hisobot (sinflar, to'lovlar, faol/xato loginlar ulushi)."""
+    try:
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        
+        cur.execute("SELECT id, school_number, place, is_paid, expire_at FROM School_number WHERE school_number = ? LIMIT 1;", (school_number,))
+        s_row = cur.fetchone()
+        school_info = {}
+        if s_row:
+            school_info = {
+                "maktab_raqami": s_row[1],
+                "nomi_joyi": s_row[2],
+                "to'langan": bool(s_row[3]),
+                "tugash_muddati": str(s_row[4]) if s_row[4] else "Cheksiz"
+            }
+            
+        cur.execute("SELECT grade, is_allowed, is_paid, allowed_until FROM Grade ORDER BY grade;")
+        grades_status = {r[0].upper(): {"allowed": bool(r[1]), "paid": bool(r[2]), "until": str(r[3]) if r[3] else None} for r in cur.fetchall()}
+        
+        cur.execute("""
+            SELECT grade, 
+                   COUNT(*) as total,
+                   SUM(CASE WHEN last_login = 1 THEN 1 ELSE 0 END) as ok_cnt,
+                   SUM(CASE WHEN role = 'parent' THEN 1 ELSE 0 END) as parent_cnt,
+                   SUM(CASE WHEN is_paid = 1 THEN 1 ELSE 0 END) as paid_cnt
+            FROM Logins
+            GROUP BY grade
+            ORDER BY grade;
+        """)
+        rows = cur.fetchall()
+        sinflar_tahlili = []
+        total_all = 0
+        total_ok = 0
+        
+        for g, total, ok, parents, paids in rows:
+            g_up = g.upper().replace("-", "").replace(" ", "")
+            st = grades_status.get(g_up, {"allowed": True, "paid": True, "until": None})
+            fail = total - (ok or 0)
+            students = total - (parents or 0)
+            total_all += total
+            total_ok += (ok or 0)
+            sinflar_tahlili.append({
+                "sinf": g,
+                "jami_loginlar": total,
+                "ishlayotgan": ok or 0,
+                "ishlamayotgan": fail,
+                "o'quvchilar": students,
+                "ota_onalar": parents or 0,
+                "to'langan_loginlar": paids or 0,
+                "sinf_ruxsati": "Ruxsat etilgan" if st["allowed"] else "Qulflangan",
+                "sinf_to'lovi": "To'langan" if st["paid"] else "To'lanmagan",
+                "amal_qilish_muddati": st["until"] or "Belgilanmagan"
+            })
+            
+        con.close()
+        success_rate = round((total_ok / total_all * 100), 1) if total_all > 0 else 0
+        return {
+            "maktab": school_info or f"{school_number}-maktab",
+            "jami_sinflar_soni": len(sinflar_tahlili),
+            "jami_loginlar": total_all,
+            "muvaffaqiyatli_kirilgan": total_ok,
+            "xatolik_berayotgan": total_all - total_ok,
+            "muvaffaqiyat_foizi": f"{success_rate}%",
+            "sinflar_kesimida": sinflar_tahlili
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 PUBLIC_FUNCTION_DECLARATIONS = [
     {
         "name": "tool_get_system_stats",
@@ -298,6 +539,78 @@ ADMIN_FUNCTION_DECLARATIONS = [
             },
             "required": ["key", "value"]
         }
+    },
+    {
+        "name": "tool_extend_grade_access",
+        "description": "Faqat administrator uchun: Muayyan sinfning (masalan '7A' yoki '7-A') to'lovi va ruxsatini berilgan kunga (standart 30 kun) uzaytirish, sinfdagi barcha loginlarni faollashtirish.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "grade": {"type": "STRING", "description": "Sinf nomi (masalan: '7A', '4B')"},
+                "days": {"type": "INTEGER", "description": "Uzaytirish kunlari soni (masalan: 30, 60, 90. Standart 30 kun)"}
+            },
+            "required": ["grade"]
+        }
+    },
+    {
+        "name": "tool_bulk_update_passwords_in_grade",
+        "description": "Faqat administrator uchun: Muayyan sinfdagi (masalan '7A') barcha o'quvchi va ota-onalar parolini bir martada yangi umumiy parolga ommaviy almashtirish.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "grade": {"type": "STRING", "description": "Sinf nomi (masalan: '7A', '4B')"},
+                "new_password": {"type": "STRING", "description": "Barcha hisoblar uchun yangi umumiy parol (masalan '12345678b')"}
+            },
+            "required": ["grade", "new_password"]
+        }
+    },
+    {
+        "name": "tool_add_student_login",
+        "description": "Faqat administrator uchun: Bazaga yangi o'quvchi yoki ota-ona loginini qo'shish yoki mavjudini yangilash.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "username": {"type": "STRING", "description": "eMaktab logini"},
+                "password": {"type": "STRING", "description": "Parol"},
+                "grade": {"type": "STRING", "description": "Sinf nomi (masalan '7A')"},
+                "school_number": {"type": "INTEGER", "description": "Maktab raqami (standart 14)"},
+                "role": {"type": "STRING", "description": "Rol: 'student' (o'quvchi) yoki 'parent' (ota-ona). Standart 'student'"}
+            },
+            "required": ["username", "password", "grade"]
+        }
+    },
+    {
+        "name": "tool_clean_grade_logins",
+        "description": "Faqat administrator uchun: Muayyan sinfdagi ishlamayotgan (xato) yoki barcha loginlarni bazadan tozalash/o'chirish.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "grade": {"type": "STRING", "description": "Sinf nomi (masalan '7A')"},
+                "failed_only": {"type": "BOOLEAN", "description": "Faqat xato loginlarni o'chirish uchun True, sinfdagi barcha hisoblarni o'chirish uchun False. Standart True"}
+            },
+            "required": ["grade"]
+        }
+    },
+    {
+        "name": "tool_reset_grade_login_status",
+        "description": "Faqat administrator uchun: Muayyan sinfdagi barcha loginlarning sessiyalarini tozalash va ularni qayta tekshirishga tayyorlash.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "grade": {"type": "STRING", "description": "Sinf nomi (masalan '7A')"}
+            },
+            "required": ["grade"]
+        }
+    },
+    {
+        "name": "tool_get_school_detailed_report",
+        "description": "Faqat administrator uchun: Maktab bo'yicha to'liq analitik hisobot (sinflar soni, o'quvchilar/ota-onalar, to'langan/to'lanmagan sinflar, faol va xato loginlar ulushi).",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "school_number": {"type": "INTEGER", "description": "Maktab raqami (standart 14)"}
+            }
+        }
     }
 ]
 
@@ -333,7 +646,16 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
             SYSTEM_INSTRUCTION + "\n"
             "DIQQAT: Ushbu foydalanuvchi tizim ADMINISTRATORI (Owner/Admin) hisoblanadi.\n"
             "Siz uning topshirig'i bo'yicha barcha ma'lumotlar bazasini ko'rish (o'quvchi va ota-onalar loginlari, parollari, sinflar ro'yxati, to'lovlar, xatolar) "
-            "va unga har qanday O'ZGARTIRISH kiritish (parolni yangilash, to'lov/ruxsat holatini sozlash, loginni o'chirish, sozlamalarni yangilash) CHEKSIZ VAKOLATIGA EGASIZ. "
+            "va unga har qanday O'ZGARTIRISH kiritish CHEKSIZ VAKOLATIGA EGASIZ.\n"
+            "Mavjud boshqaruv qobiliyatlaringiz:\n"
+            "- Sinf to'lovini uzaytirish / faollashtirish: masalan '7-A to'lovini 30 kunga uzaytir' -> `tool_extend_grade_access` chaqiring.\n"
+            "- Sinf parollarini ommaviy almashtirish: masalan '7-A dagi hamma parollarni 12345678b ga o'zgartir' -> `tool_bulk_update_passwords_in_grade` chaqiring.\n"
+            "- Yangi o'quvchi yoki ota-ona qo'shish: masalan '7-A ga yangi o'quvchi qo'sh: login student1, parol pass1' -> `tool_add_student_login` chaqiring.\n"
+            "- Xato yoki ishlamayotgan loginlarni tozalash: masalan '7-A dagi xato loginlarni o'chirib tashla' -> `tool_clean_grade_logins` chaqiring.\n"
+            "- Maktab bo'yicha to'liq hisobot: masalan '14-maktab bo'yicha to'liq hisobot ber' -> `tool_get_school_detailed_report` chaqiring.\n"
+            "- Sessiyalarni yangilash / qayta tekshirish: masalan '7-A sessiyalarini yangila' -> `tool_reset_grade_login_status` chaqiring.\n"
+            "- Sinf holatini sozlash / qulflash / ochish: `tool_set_grade_status` chaqiring.\n"
+            "- Yakka login parolini almashtirish yoki o'chirish: `tool_update_student_password`, `tool_delete_student_login` chaqiring.\n"
             "Administrator so'ragan har qanday ma'lumotni to'liq bering va buyurgan o'zgartirishlarini bajaring."
         )
     else:
@@ -419,6 +741,18 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
                                     f_result = tool_delete_student_login(**fargs)
                                 elif fname == "tool_set_bot_setting":
                                     f_result = tool_set_bot_setting(**fargs)
+                                elif fname == "tool_extend_grade_access":
+                                    f_result = tool_extend_grade_access(**fargs)
+                                elif fname == "tool_bulk_update_passwords_in_grade":
+                                    f_result = tool_bulk_update_passwords_in_grade(**fargs)
+                                elif fname == "tool_add_student_login":
+                                    f_result = tool_add_student_login(**fargs)
+                                elif fname == "tool_clean_grade_logins":
+                                    f_result = tool_clean_grade_logins(**fargs)
+                                elif fname == "tool_reset_grade_login_status":
+                                    f_result = tool_reset_grade_login_status(**fargs)
+                                elif fname == "tool_get_school_detailed_report":
+                                    f_result = tool_get_school_detailed_report(**fargs)
                                 else:
                                     f_result = {}
 
