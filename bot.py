@@ -3324,7 +3324,8 @@ async def ai_chat_handler(message: Message, state: FSMContext):
         pass
 
     start_time = asyncio.get_event_loop().time()
-    ai_task = asyncio.create_task(ask_gemini(message.text, user_name=user_name))
+    is_admin = await is_admin_or_owner(message.from_user.id)
+    ai_task = asyncio.create_task(ask_gemini(message.text, user_name=user_name, is_admin=is_admin))
     active_ai_tasks[draft_id] = ai_task
 
     try:
@@ -3497,7 +3498,8 @@ async def voice_audio_message_handler(message: Message, state: FSMContext):
         audio_bytes = buf.getvalue()
 
         user_name = message.from_user.full_name or message.from_user.first_name or ""
-        result = await process_audio_voice(audio_bytes, mime_type=mime_type, user_name=user_name)
+        is_admin = await is_admin_or_owner(message.from_user.id)
+        result = await process_audio_voice(audio_bytes, mime_type=mime_type, user_name=user_name, is_admin=is_admin)
 
         msg_type = result.get("type", "chat")
         transcript = result.get("transcript", "").strip()
@@ -3512,7 +3514,12 @@ async def voice_audio_message_handler(message: Message, state: FSMContext):
                 await handle_logins_batch_execution(message, creds)
                 return
 
-        reply = result.get("reply", "Ovozli xabaringiz tushunildi.")
+        # If voice contains conversational or command transcript, route to ask_gemini with admin status
+        if transcript:
+            reply = await ask_gemini(transcript, user_name=user_name, is_admin=is_admin)
+        else:
+            reply = result.get("reply", "Ovozli xabaringiz tushunildi.")
+
         styled_reply = render_styled_text(reply)
         trans_header = f"🗣 <i>«{transcript}»</i>\n\n" if transcript else ""
 
