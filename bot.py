@@ -27,7 +27,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import (
     Message, ReplyKeyboardRemove,
-    InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, FSInputFile, CallbackQuery,
+    InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, FSInputFile, BufferedInputFile, CallbackQuery,
     MessageGenerationStopped
 )
 from telegraph import Telegraph
@@ -812,6 +812,9 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
         await callback.answer("Ushbu sinfda loginlar topilmadi.", show_alert=True)
         return
 
+    # Sort: Students first, then Parents; within each group, sort alphabetically by username
+    all_logins_in_grade.sort(key=lambda l: (1 if getattr(l, "role", "student") == "parent" else 0, l.username.lower()))
+
     page_size = 6
     total_pages = (len(all_logins_in_grade) + page_size - 1) // page_size
     page = max(1, min(page, total_pages))
@@ -852,6 +855,9 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
         rows.append(nav_row)
 
     rows.append([
+        make_btn("📋 Barcha login va parollar", callback_data=f"agrd_all_{school_id}_{grade}", emoji="memo")
+    ])
+    rows.append([
         make_btn("Sinflarga qaytish", callback_data=f"asch_gr_{school_id}", emoji="books"),
         make_btn("Maktabga", callback_data=f"view_sch_{school_id}", emoji="school")
     ])
@@ -863,6 +869,179 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
         )
     except TelegramBadRequest:
         pass
+
+
+@dp.callback_query(F.data.startswith("agrd_all_"))
+async def admin_grade_all_logins_and_passwords_callback(callback: CallbackQuery):
+    if not await is_admin_or_owner(callback.from_user.id):
+        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
+        return
+
+    # format: agrd_all_{school_id}_{grade}
+    parts = callback.data.split("_")
+    school_id = int(parts[2])
+    grade = parts[3]
+
+    school = await get_school_number(id=school_id)
+    school_name = f"{school.school_number}-maktab" if school else f"{school_id}"
+    all_logins_in_grade = await get_all_logins(school2=school_id, grade=grade)
+
+    if not all_logins_in_grade:
+        await callback.answer("Ushbu sinfda loginlar topilmadi.", show_alert=True)
+        return
+
+    await callback.answer("⏳ Login va parollar saralanmoqda...", show_alert=False)
+
+    async def fetch_item(l):
+        prof = await get_student_profile_data(l.username, l.password, l.last_cookie)
+        name = prof.get("full_name") or l.username
+        role = getattr(l, "role", "student") or "student"
+        return {
+            "login": l.username,
+            "password": l.password,
+            "role": role,
+            "name": name,
+            "last_login": l.last_login
+        }
+
+    items = await asyncio.gather(*[fetch_item(l) for l in all_logins_in_grade])
+
+    students = [x for x in items if x["role"] != "parent"]
+    parents = [x for x in items if x["role"] == "parent"]
+
+    # Sorted alphabetically by name within each group
+    students.sort(key=lambda x: x["name"].lower())
+    parents.sort(key=lambda x: x["name"].lower())
+
+    text_parts = [
+        f"{tg_icon('memo')} <b>{school_name} | {grade}-sinf barcha login va parollari:</b>",
+        f"• {tg_icon('users')} Jami hisoblar: <b>{len(items)} ta</b> (🎓 O'quvchilar: {len(students)}, 👨‍👩‍👦 Ota-onalar: {len(parents)})\n"
+    ]
+
+    if students:
+        text_parts.append(f"🎓 <b>O'QUVCHILAR (STUDENTS) — {len(students)} ta:</b>")
+        for idx, s in enumerate(students, 1):
+            ico = tg_icon('check', '✅') if s.get('last_login') else tg_icon('cross', '❌')
+            text_parts.append(
+                f"{idx}. <b>{s['name']}</b> {ico}\n"
+                f"   • Login: <code>{s['login']}</code>\n"
+                f"   • Parol: <code>{s['password']}</code>"
+            )
+        text_parts.append("")
+
+    if parents:
+        text_parts.append(f"👨‍👩‍👦 <b>OTA-ONALAR (PARENTS) — {len(parents)} ta:</b>")
+        for idx, p in enumerate(parents, 1):
+            ico = tg_icon('check', '✅') if p.get('last_login') else tg_icon('cross', '❌')
+            text_parts.append(
+                f"{idx}. <b>{p['name']}</b> {ico}\n"
+                f"   • Login: <code>{p['login']}</code>\n"
+                f"   • Parol: <code>{p['password']}</code>"
+            )
+
+    full_text = "\n".join(text_parts)
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [make_btn("📥 TXT fayl yuklab olish", callback_data=f"dtxt_{school_id}_{grade}", emoji="memo")],
+        [make_btn("⬅️ Sinf ro'yxatiga qaytish", callback_data=f"agrd_{school_id}_{grade}_1", emoji="books")],
+        [make_btn("🏫 Maktabga", callback_data=f"view_sch_{school_id}", emoji="school")]
+    ])
+
+    if len(full_text) <= 4000:
+        try:
+            await callback.message.edit_text(full_text, reply_markup=kb)
+        except TelegramBadRequest:
+            await callback.message.answer(full_text, reply_markup=kb)
+    else:
+        chunks = []
+        cur = []
+        cur_len = 0
+        for block in full_text.split("\n\n"):
+            if cur_len + len(block) + 2 > 3800:
+                chunks.append("\n\n".join(cur))
+                cur = [block]
+                cur_len = len(block)
+            else:
+                cur.append(block)
+                cur_len += len(block) + 2
+        if cur:
+            chunks.append("\n\n".join(cur))
+
+        for i, ch in enumerate(chunks):
+            reply_markup = kb if i == len(chunks) - 1 else None
+            await callback.message.answer(ch, reply_markup=reply_markup)
+
+
+@dp.callback_query(F.data.startswith("dtxt_"))
+async def admin_download_grade_txt_callback(callback: CallbackQuery):
+    if not await is_admin_or_owner(callback.from_user.id):
+        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
+        return
+
+    # format: dtxt_{school_id}_{grade}
+    parts = callback.data.split("_")
+    school_id = int(parts[1])
+    grade = parts[2]
+
+    school = await get_school_number(id=school_id)
+    school_name = f"{school.school_number}-maktab" if school else f"{school_id}"
+    all_logins_in_grade = await get_all_logins(school2=school_id, grade=grade)
+
+    if not all_logins_in_grade:
+        await callback.answer("Ushbu sinfda loginlar topilmadi.", show_alert=True)
+        return
+
+    await callback.answer("⏳ Fayl tayyorlanmoqda...", show_alert=False)
+
+    async def fetch_item(l):
+        prof = await get_student_profile_data(l.username, l.password, l.last_cookie)
+        name = prof.get("full_name") or l.username
+        role = getattr(l, "role", "student") or "student"
+        return {
+            "login": l.username,
+            "password": l.password,
+            "role": role,
+            "name": name,
+            "last_login": l.last_login
+        }
+
+    items = await asyncio.gather(*[fetch_item(l) for l in all_logins_in_grade])
+    students = [x for x in items if x["role"] != "parent"]
+    parents = [x for x in items if x["role"] == "parent"]
+
+    students.sort(key=lambda x: x["name"].lower())
+    parents.sort(key=lambda x: x["name"].lower())
+
+    doc_lines = [
+        f"{school_name} | {grade}-sinf login va parollari",
+        f"Jami hisoblar: {len(items)} ta (O'quvchilar: {len(students)}, Ota-onalar: {len(parents)})",
+        "=" * 55,
+        ""
+    ]
+
+    if students:
+        doc_lines.append(f"[O'QUVCHILAR (STUDENTS) - {len(students)} ta]")
+        for idx, s in enumerate(students, 1):
+            doc_lines.append(f"{idx}. {s['name']}")
+            doc_lines.append(f"   Login: {s['login']}")
+            doc_lines.append(f"   Parol: {s['password']}")
+            doc_lines.append("")
+
+    if parents:
+        doc_lines.append(f"[OTA-ONALAR (PARENTS) - {len(parents)} ta]")
+        for idx, p in enumerate(parents, 1):
+            doc_lines.append(f"{idx}. {p['name']}")
+            doc_lines.append(f"   Login: {p['login']}")
+            doc_lines.append(f"   Parol: {p['password']}")
+            doc_lines.append("")
+
+    content_bytes = "\n".join(doc_lines).encode("utf-8")
+    file_doc = BufferedInputFile(content_bytes, filename=f"{school.school_number}-maktab_{grade}_loginlar.txt")
+
+    await callback.message.answer_document(
+        file_doc,
+        caption=f"📄 <b>{school_name} | {grade}-sinf</b> barcha login va parollari (nomi va turi bo'yicha saralangan)"
+    )
 
 
 # -------------------------------------------------------------------------
