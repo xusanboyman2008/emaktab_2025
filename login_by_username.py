@@ -23,8 +23,21 @@ async def login_by_user(
     captcha_text: str = None,
     session: aiohttp.ClientSession = None
 ):
-    if not captcha_id:
-        captcha_id = "f61a11f3-1cee-448c-ad2b-fd2eee8f9b2d"
+    if not captcha_id or (use_captcha and not captcha_text):
+        try:
+            from captcha_manager import get_ready_captcha
+            c_id, c_code = await get_ready_captcha()
+            if not captcha_id:
+                captcha_id = c_id
+            if use_captcha and not captcha_text:
+                captcha_text = c_code
+        except Exception:
+            if not captcha_id:
+                try:
+                    from captcha_finder import get_live_captcha_id
+                    captcha_id = await get_live_captcha_id()
+                except Exception:
+                    captcha_id = "f61a11f3-1cee-448c-ad2b-fd2eee8f9b2d"
 
     if use_captcha and not captcha_text:
         captcha_text = await asyncio.to_thread(get_captcha_code, captcha_id)

@@ -438,6 +438,42 @@ def tool_get_school_detailed_report(school_number: int = 14):
     except Exception as e:
         return {"error": str(e)}
 
+async def tool_manage_captchas(action: str = "status", count: int = 10):
+    """Avtomatik kapchalar omborini boshqaradi: 'status' (kapchalar soni va holati), 'harvest' (yangi kapchalar yig'ish), 'clean' (yaroqsiz va eskilarni tozalash)."""
+    try:
+        from captcha_manager import get_captcha_pool_status, harvest_fresh_captchas, cleanup_old_or_invalid_captchas
+        act = action.strip().lower()
+        if act == "harvest":
+            harvested = await harvest_fresh_captchas(target_count=count)
+            pool_stat = get_captcha_pool_status()
+            return {
+                "success": True,
+                "action": "harvest",
+                "yangi_kapchalar_soni": len(harvested),
+                "jami_ombor": pool_stat["jami_kapchalar"],
+                "message": f"Muvaffaqiyatli {len(harvested)} ta yangi kapcha yig'ildi va tekshirilib bazaga saqlandi. Hozirgi jami kapchalar: {pool_stat['jami_kapchalar']} ta."
+            }
+        elif act in ["clean", "cleanup"]:
+            c_res = await cleanup_old_or_invalid_captchas(max_pool_size=25)
+            return {
+                "success": True,
+                "action": "clean",
+                "ochirilgan_yaroqsiz": c_res["deleted_invalid"],
+                "ochirilgan_eski": c_res["deleted_oldest"],
+                "qolgan_kapchalar": c_res["remaining"],
+                "message": f"Kapchalar tozalandi: {c_res['deleted_invalid']} ta yaroqsiz o'chirildi, {c_res['deleted_oldest']} ta eski kesildi. Faol kapchalar: {c_res['remaining']} ta."
+            }
+        else:
+            stat = get_captcha_pool_status()
+            return {
+                "success": True,
+                "action": "status",
+                "holat": stat,
+                "message": f"Hozirda bazada {stat['jami_kapchalar']} ta kapcha mavjud ({stat['bosh_kapchalar']} ta bo'sh, {stat['band_kapchalar']} ta band). Eng yangisi: {stat['eng_yangi_sana']}."
+            }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 PUBLIC_FUNCTION_DECLARATIONS = [
     {
         "name": "tool_get_system_stats",
@@ -611,6 +647,17 @@ ADMIN_FUNCTION_DECLARATIONS = [
                 "school_number": {"type": "INTEGER", "description": "Maktab raqami (standart 14)"}
             }
         }
+    },
+    {
+        "name": "tool_manage_captchas",
+        "description": "Faqat administrator uchun: Avtomatik kapchalar omborini boshqarish. 'status' (hozirgi kapchalar soni va holati), 'harvest' (yangi kapchalar yig'ish), 'clean' (yaroqsiz va eskilarni tozalash).",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action": {"type": "STRING", "description": "'status', 'harvest' yoki 'clean'. Standart: 'status'"},
+                "count": {"type": "INTEGER", "description": "Yangi yig'iladigan kapchalar soni (standart 10)"}
+            }
+        }
     }
 ]
 
@@ -653,6 +700,7 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
             "- Yangi o'quvchi yoki ota-ona qo'shish: masalan '7-A ga yangi o'quvchi qo'sh: login student1, parol pass1' -> `tool_add_student_login` chaqiring.\n"
             "- Xato yoki ishlamayotgan loginlarni tozalash: masalan '7-A dagi xato loginlarni o'chirib tashla' -> `tool_clean_grade_logins` chaqiring.\n"
             "- Maktab bo'yicha to'liq hisobot: masalan '14-maktab bo'yicha to'liq hisobot ber' -> `tool_get_school_detailed_report` chaqiring.\n"
+            "- Kapchalarni boshqarish: masalan 'Kapchalarni yangila', 'Yangi kapchalar yig'ib ber', 'Kapchalar holatini ayt' -> `tool_manage_captchas` chaqiring.\n"
             "- Sessiyalarni yangilash / qayta tekshirish: masalan '7-A sessiyalarini yangila' -> `tool_reset_grade_login_status` chaqiring.\n"
             "- Sinf holatini sozlash / qulflash / ochish: `tool_set_grade_status` chaqiring.\n"
             "- Yakka login parolini almashtirish yoki o'chirish: `tool_update_student_password`, `tool_delete_student_login` chaqiring.\n"
@@ -753,6 +801,8 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
                                     f_result = tool_reset_grade_login_status(**fargs)
                                 elif fname == "tool_get_school_detailed_report":
                                     f_result = tool_get_school_detailed_report(**fargs)
+                                elif fname == "tool_manage_captchas":
+                                    f_result = await tool_manage_captchas(**fargs)
                                 else:
                                     f_result = {}
 
