@@ -942,7 +942,6 @@ async def admin_grade_all_logins_and_passwords_callback(callback: CallbackQuery)
     full_text = "\n".join(text_parts)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [make_btn("📥 TXT fayl yuklab olish", callback_data=f"dtxt_{school_id}_{grade}", emoji="memo")],
         [make_btn("⬅️ Sinf ro'yxatiga qaytish", callback_data=f"agrd_{school_id}_{grade}_1", emoji="books")],
         [make_btn("🏫 Maktabga", callback_data=f"view_sch_{school_id}", emoji="school")]
     ])
@@ -970,78 +969,6 @@ async def admin_grade_all_logins_and_passwords_callback(callback: CallbackQuery)
         for i, ch in enumerate(chunks):
             reply_markup = kb if i == len(chunks) - 1 else None
             await callback.message.answer(ch, reply_markup=reply_markup)
-
-
-@dp.callback_query(F.data.startswith("dtxt_"))
-async def admin_download_grade_txt_callback(callback: CallbackQuery):
-    if not await is_admin_or_owner(callback.from_user.id):
-        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
-        return
-
-    # format: dtxt_{school_id}_{grade}
-    parts = callback.data.split("_")
-    school_id = int(parts[1])
-    grade = parts[2]
-
-    school = await get_school_number(id=school_id)
-    school_name = f"{school.school_number}-maktab" if school else f"{school_id}"
-    all_logins_in_grade = await get_all_logins(school2=school_id, grade=grade)
-
-    if not all_logins_in_grade:
-        await callback.answer("Ushbu sinfda loginlar topilmadi.", show_alert=True)
-        return
-
-    await callback.answer("⏳ Fayl tayyorlanmoqda...", show_alert=False)
-
-    async def fetch_item(l):
-        prof = await get_student_profile_data(l.username, l.password, l.last_cookie)
-        name = prof.get("full_name") or l.username
-        role = getattr(l, "role", "student") or "student"
-        return {
-            "login": l.username,
-            "password": l.password,
-            "role": role,
-            "name": name,
-            "last_login": l.last_login
-        }
-
-    items = await asyncio.gather(*[fetch_item(l) for l in all_logins_in_grade])
-    students = [x for x in items if x["role"] != "parent"]
-    parents = [x for x in items if x["role"] == "parent"]
-
-    students.sort(key=lambda x: x["name"].lower())
-    parents.sort(key=lambda x: x["name"].lower())
-
-    doc_lines = [
-        f"{school_name} | {grade}-sinf login va parollari",
-        f"Jami hisoblar: {len(items)} ta (O'quvchilar: {len(students)}, Ota-onalar: {len(parents)})",
-        "=" * 55,
-        ""
-    ]
-
-    if students:
-        doc_lines.append(f"[O'QUVCHILAR (STUDENTS) - {len(students)} ta]")
-        for idx, s in enumerate(students, 1):
-            doc_lines.append(f"{idx}. {s['name']}")
-            doc_lines.append(f"   Login: {s['login']}")
-            doc_lines.append(f"   Parol: {s['password']}")
-            doc_lines.append("")
-
-    if parents:
-        doc_lines.append(f"[OTA-ONALAR (PARENTS) - {len(parents)} ta]")
-        for idx, p in enumerate(parents, 1):
-            doc_lines.append(f"{idx}. {p['name']}")
-            doc_lines.append(f"   Login: {p['login']}")
-            doc_lines.append(f"   Parol: {p['password']}")
-            doc_lines.append("")
-
-    content_bytes = "\n".join(doc_lines).encode("utf-8")
-    file_doc = BufferedInputFile(content_bytes, filename=f"{school.school_number}-maktab_{grade}_loginlar.txt")
-
-    await callback.message.answer_document(
-        file_doc,
-        caption=f"📄 <b>{school_name} | {grade}-sinf</b> barcha login va parollari (nomi va turi bo'yicha saralangan)"
-    )
 
 
 # -------------------------------------------------------------------------
