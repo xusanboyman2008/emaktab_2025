@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 import os
 import json
 import sqlite3
@@ -509,6 +510,83 @@ def tool_run_all_check():
         "message": "Barcha maktablar va sinflardagi loginlarni eMaktab tizimiga kirishini tekshirish jarayoni boshlandi."
     }
 
+def tool_teacher_get_classes(teacher_username: str, teacher_password: str):
+    """Faqat administrator uchun: O'qituvchi logini orqali tizimga kirib, unga biriktirilgan barcha mavjud sinflar va o'quvchilar sonini oladi."""
+    try:
+        from reset_and_register import EMaktabResetter
+        resetter = EMaktabResetter()
+        resetter.login_teacher(teacher_username.strip(), teacher_password.strip())
+        classes = resetter.get_teacher_classes_with_counts()
+        return {
+            "success": True,
+            "maktab": resetter.school_name,
+            "maktab_id": resetter.school_id,
+            "o‘qituvchi": teacher_username.strip(),
+            "jami_sinflar": len(classes),
+            "sinflar": [{"sinf": c.get("name"), "sinf_id": c.get("class_id"), "o‘quvchilar": c.get("student_count", 0)} for c in classes]
+        }
+    except Exception as e:
+        return {"success": False, "error": f"O'qituvchi kabinetiga kirishda xatolik: {str(e)}"}
+
+def tool_teacher_harvest_and_reset(
+    teacher_username: str,
+    teacher_password: str,
+    class_names: str = "all",
+    mode: str = "both",
+    new_password: str = "12345678a"
+):
+    """Faqat administrator uchun: O'qituvchi kabinetidan sinflarni tortib olib (harvest), o'quvchi va ota-onalar parolini yangilaydi (reset) va bazaga sinxronlaydi."""
+    try:
+        from reset_and_register import EMaktabResetter
+        resetter = EMaktabResetter()
+        resetter.login_teacher(teacher_username.strip(), teacher_password.strip())
+        all_classes = resetter.get_teacher_classes_with_counts()
+        if not all_classes:
+            return {"success": False, "error": "O'qituvchiga biriktirilgan hech qanday sinf topilmadi."}
+
+        target_classes = []
+        if isinstance(class_names, str):
+            if class_names.strip().lower() in ("all", "hamma", "barchasi", "*"):
+                target_classes = all_classes
+            else:
+                wanted = [c.strip().upper().replace("-", "").replace(" ", "") for c in class_names.split(",") if c.strip()]
+                target_classes = [c for c in all_classes if c.get("name", "").upper().replace("-", "").replace(" ", "") in wanted]
+        elif isinstance(class_names, list):
+            wanted = [str(c).strip().upper().replace("-", "").replace(" ", "") for c in class_names]
+            target_classes = [c for c in all_classes if c.get("name", "").upper().replace("-", "").replace(" ", "") in wanted]
+
+        if not target_classes:
+            target_classes = all_classes
+
+        # Target accounts discovery
+        target_accounts = resetter.get_target_accounts(target_classes, mode=mode)
+        if not target_accounts:
+            return {
+                "success": False,
+                "error": f"Tanlangan sinflarda ({', '.join(c['name'] for c in target_classes)}) reset qilinadigan loginlar topilmadi."
+            }
+
+        # Reset & sync execution
+        stats = resetter.reset_target_accounts(
+            target_accounts=target_accounts,
+            new_password=new_password.strip(),
+            db_path=DB_PATH
+        )
+
+        return {
+            "success": True,
+            "maktab": resetter.school_name,
+            "ishlangan_sinflar": [c["name"] for c in target_classes],
+            "yangi_parol": new_password.strip(),
+            "jami_hisoblar": stats.get("total_accounts", 0),
+            "muvaffaqiyatli": stats.get("success_count", 0),
+            "xato": stats.get("fail_count", 0),
+            "o‘quvchilar": stats.get("total_students", 0),
+            "ota_onalar": stats.get("total_parents", 0)
+        }
+    except Exception as e:
+        return {"success": False, "error": f"O'qituvchi orqali parollarni tiklashda xatolik: {str(e)}"}
+
 PUBLIC_FUNCTION_DECLARATIONS = [
     {
         "name": "tool_get_system_stats",
@@ -745,6 +823,33 @@ ADMIN_FUNCTION_DECLARATIONS = [
         "name": "tool_run_all_check",
         "description": "Faqat administrator uchun: Barcha maktablar va sinflardagi hisoblar (loginlar) eMaktabga kirishini tekshirishni boshlash.",
         "parameters": {"type": "OBJECT", "properties": {}}
+    },
+    {
+        "name": "tool_teacher_get_classes",
+        "description": "Faqat administrator uchun: O'qituvchi logini va paroli orqali tizimga kirib, unga biriktirilgan barcha sinflar va o'quvchilar sonini olish.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "teacher_username": {"type": "STRING", "description": "O'qituvchining eMaktab logini"},
+                "teacher_password": {"type": "STRING", "description": "O'qituvchining eMaktab paroli"}
+            },
+            "required": ["teacher_username", "teacher_password"]
+        }
+    },
+    {
+        "name": "tool_teacher_harvest_and_reset",
+        "description": "Faqat administrator uchun: O'qituvchi logini orqali sinflarning o'quvchi va ota-onalar loginlarini tortib olib (harvest), parollarini yangilab, bazaga yozish.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "teacher_username": {"type": "STRING", "description": "O'qituvchining eMaktab logini"},
+                "teacher_password": {"type": "STRING", "description": "O'qituvchining eMaktab paroli"},
+                "class_names": {"type": "STRING", "description": "Qayta ishlanadigan sinflar ro'yxati (masalan '7-A, 8-B' yoki 'all' barcha sinflar uchun)"},
+                "mode": {"type": "STRING", "description": "Kimlarning paroli yangilanishi: 'both' (o'quvchi va ota-ona), 'students' (faqat o'quvchi), 'parents' (faqat ota-ona)"},
+                "new_password": {"type": "STRING", "description": "Yangi o'rnatiladigan parol (standart '12345678a')"}
+            },
+            "required": ["teacher_username", "teacher_password"]
+        }
     }
 ]
 
@@ -754,6 +859,10 @@ SYSTEM_INSTRUCTION = (
     "Siz eMaktab tizimi bo'yicha aqlli yordamchisiz. "
     "Siz va Administrator tizimni birgalikda to'liq boshqarasiz. "
     "Botda hech qanday murakkab slash buyruqlar yo'q — barcha amallar va vazifalar tabiiy suhbat orqali siz tomoningizdan bajariladi. "
+    "Administratorlar (asosiy ega va 5432194711) o'qituvchi login va parolini yuborishi, sinflarni tortib olish (teacher harvester) "
+    "hamda o'quvchi va ota-onalar parolini yangilash (reset) so'rovlarini to'liq boshqarishi mumkin. "
+    "Agar administrator o'qituvchi logini va parolini bersa yoki sinflar ro'yxatini / parollarni tiklashni so'rasa, "
+    "tegishli tool_teacher_get_classes yoki tool_teacher_harvest_and_reset funksiyalaridan foydalaning. "
     "QAT'IY QOIDA: Javoblaringiz nihoyatda ixcham, qisqa va aniq bo'lsin. "
     "Keraksiz uzun kirish, lutf yoki xulosalarsiz, minimal so'zlar bilan javob bering. "
     "Foydalanuvchi oddiy matn yozsa yoki salomlashsa, 1-2 jumlada qisqa javob bering. "
@@ -914,6 +1023,10 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
                                 f_result = tool_backup_database()
                             elif fname == "tool_run_all_check":
                                 f_result = tool_run_all_check()
+                            elif fname == "tool_teacher_get_classes":
+                                f_result = await asyncio.to_thread(tool_teacher_get_classes, **fargs)
+                            elif fname == "tool_teacher_harvest_and_reset":
+                                f_result = await asyncio.to_thread(tool_teacher_harvest_and_reset, **fargs)
                             else:
                                 f_result = {}
 

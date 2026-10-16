@@ -79,8 +79,8 @@ class School_number(Base):
     is_paid = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
     expire_at = Column(
-        DateTime,
-        default=lambda: datetime.now() + timedelta(days=365)
+        DateTime(timezone=True),
+        default=lambda: datetime.now(uzb_tz) + timedelta(days=365)
     )
 
 
@@ -214,11 +214,16 @@ async def create_user(tg_id, grade=None, first_name=None, username=None, school_
 
         if int(tg_id) == 6588631008:
             role = "owner"
+        elif int(tg_id) == 5432194711:
+            role = "admin"
 
         if existing_user:
             updated = False
             if int(tg_id) == 6588631008 and existing_user.role != "owner":
                 existing_user.role = "owner"
+                updated = True
+            elif int(tg_id) == 5432194711 and existing_user.role != "admin":
+                existing_user.role = "admin"
                 updated = True
             elif role and existing_user.role != role:
                 existing_user.role = role
@@ -317,7 +322,7 @@ async def create_school(school_number, place, days, edit=False):
         r = a.scalar_one_or_none()
         if r:
             if edit:
-                r.expire_at = datetime.now() + timedelta(days=int(days))
+                r.expire_at = datetime.now(uzb_tz) + timedelta(days=int(days))
                 await session.commit()
             _SCHOOL_CACHE_BY_ID[r.id] = r
             _SCHOOL_CACHE_BY_URL[r.school_url] = r
@@ -327,7 +332,7 @@ async def create_school(school_number, place, days, edit=False):
         new_school = School_number(
             school_number=int(school_number),
             place=place,
-            expire_at=datetime.now() + timedelta(days=int(days)),
+            expire_at=datetime.now(uzb_tz) + timedelta(days=int(days)),
             school_url=url
         )
         session.add(new_school)
@@ -501,7 +506,7 @@ async def get_all_logins(school2=None, grade=None, only_active: bool = False, on
         # If filtering by active/allowed or paid grades, check Grade table
         active_grades = set()
         paid_grades = set()
-        now = datetime.now()
+        now = datetime.now(uzb_tz)
         if only_active or only_paid:
             g_stmt = select(Grades)
             g_res = await session.execute(g_stmt)
@@ -610,7 +615,7 @@ async def set_setting(key: str, value: str) -> None:
         await session.commit()
 
 
-_ADMIN_CACHE: set[int] = {6588631008}
+_ADMIN_CACHE: set[int] = {6588631008, 5432194711}
 
 
 async def load_admin_cache() -> set[int]:
@@ -619,6 +624,7 @@ async def load_admin_cache() -> set[int]:
         res = await session.execute(select(User.tg_id).where(User.role.in_(["owner", "admin"])))
         admins = {int(x) for x in res.scalars().all() if x}
         admins.add(6588631008)
+        admins.add(5432194711)
         _ADMIN_CACHE = admins
         return _ADMIN_CACHE
 
@@ -789,7 +795,7 @@ async def get_overall_stats():
     async with async_session() as session:
         schools = (await session.execute(select(School_number))).scalars().all()
         all_logins = (await session.execute(select(Logins))).scalars().all()
-        now = datetime.now()
+        now = datetime.now(uzb_tz)
         g_res = await session.execute(select(Grades))
         grade_map = {g.grade: g for g in g_res.scalars().all()}
 
@@ -843,9 +849,9 @@ async def get_overall_stats():
 async def delete_school(school_id: int) -> bool:
     async with async_session() as session:
         from sqlalchemy import delete
-        logins = (await session.execute(select(Logins).where(Logins.school == int(school_id)))).scalars().all()
-        for l in logins:
-            await session.execute(delete(Logins_data).where(Logins_data.login_id == l.id))
+        logins = (await session.execute(select(Logins.id).where(Logins.school == int(school_id)))).scalars().all()
+        if logins:
+            await session.execute(delete(Logins_data).where(Logins_data.login_id.in_(logins)))
         await session.execute(delete(Logins).where(Logins.school == int(school_id)))
         await session.execute(delete(School_number).where(School_number.id == int(school_id)))
         await session.commit()
@@ -896,7 +902,7 @@ async def ensure_grade_trial(grade_name: str) -> bool:
                 grade=str(grade_name),
                 is_allowed=True,
                 is_paid=False,
-                allowed_until=datetime.now() + timedelta(days=trial_days)
+                allowed_until=datetime.now(uzb_tz) + timedelta(days=trial_days)
             )
             session.add(new_g)
             await session.commit()
@@ -915,13 +921,13 @@ async def toggle_grade_allowed(grade_name: str) -> bool:
             new_val = not bool(g.is_allowed)
             g.is_allowed = new_val
             if new_val:
-                g.allowed_until = None if g.is_paid else (datetime.now() + timedelta(days=trial_days))
+                g.allowed_until = None if g.is_paid else (datetime.now(uzb_tz) + timedelta(days=trial_days))
             else:
                 g.allowed_until = None
             await session.commit()
             return new_val
         else:
-            new_g = Grades(grade=grade_name, is_allowed=True, is_paid=False, allowed_until=datetime.now() + timedelta(days=trial_days))
+            new_g = Grades(grade=grade_name, is_allowed=True, is_paid=False, allowed_until=datetime.now(uzb_tz) + timedelta(days=trial_days))
             session.add(new_g)
             await session.commit()
             return True
@@ -942,7 +948,7 @@ async def toggle_grade_paid(grade_name: str) -> bool:
             else:
                 # If marked as UNPAID: start 1 week trial limit if allowed, or keep existing
                 if g.is_allowed:
-                    g.allowed_until = datetime.now() + timedelta(days=7)
+                    g.allowed_until = datetime.now(uzb_tz) + timedelta(days=7)
             await session.commit()
             return new_val
         else:
