@@ -56,27 +56,30 @@ url = os.getenv('URL', "https://emaktab-2025.onrender.com")
 Token = os.getenv('TOKEN', "8301189313:AAFApmwNLY9AlccUQtfXP5PfV0kvg0RBQr8")
 DB_PATH = '/home/ubuntu/emaktab_2025/database.sqlite3' if os.path.exists('/home/ubuntu/emaktab_2025/database.sqlite3') else '/home/xusanboyman/emaktab_2025/database.sqlite3'
 
-def apply_premium_to_markup(markup):
+def apply_premium_to_markup(markup, enable_custom: bool = True):
     if not markup or not getattr(markup, "inline_keyboard", None):
         return markup
     for row in markup.inline_keyboard:
         for btn in row:
             clean_text = btn.text.strip()
-            if not getattr(btn, "icon_custom_emoji_id", None):
-                for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
-                    if clean_text.startswith(char):
-                        btn.icon_custom_emoji_id = str(EMOJI_MAP[char])
-                        rem = clean_text[len(char):].strip()
-                        if rem:
-                            btn.text = rem
-                        break
+            if enable_custom:
+                if not getattr(btn, "icon_custom_emoji_id", None):
+                    for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
+                        if clean_text.startswith(char):
+                            btn.icon_custom_emoji_id = str(EMOJI_MAP[char])
+                            rem = clean_text[len(char):].strip()
+                            if rem:
+                                btn.text = rem
+                            break
+                else:
+                    for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
+                        if clean_text.startswith(char):
+                            rem = clean_text[len(char):].strip()
+                            if rem:
+                                btn.text = rem
+                            break
             else:
-                for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
-                    if clean_text.startswith(char):
-                        rem = clean_text[len(char):].strip()
-                        if rem:
-                            btn.text = rem
-                        break
+                btn.icon_custom_emoji_id = None
     return markup
 
 
@@ -93,7 +96,15 @@ class PremiumEmojiMiddleware(BaseRequestMiddleware):
                 method.caption = apply_premium_emojis(method.caption)
 
         if hasattr(method, "reply_markup") and method.reply_markup:
-            apply_premium_to_markup(method.reply_markup)
+            btn_mode = await get_setting("button_custom_emojis", "1")
+            chat_id = getattr(method, "chat_id", None)
+            if btn_mode == "1":
+                enable_custom = True
+            elif btn_mode == "0":
+                enable_custom = False
+            else:  # auto
+                enable_custom = (chat_id is not None and int(chat_id) == OWNER_TG_ID)
+            apply_premium_to_markup(method.reply_markup, enable_custom=enable_custom)
 
         return await make_request(bot, method)
 
@@ -1874,12 +1885,20 @@ async def admin_settings_menu_handler(event: Message | CallbackQuery, state: FSM
     admins = await get_all_admins()
     check_time = await get_setting("check_time", "07:00")
     trial_days = await get_setting("trial_days", "7")
+    btn_mode = await get_setting("button_custom_emojis", "1")
+    mode_titles = {
+        "1": "Premium (Animatsiyali) ✨",
+        "0": "Standart (Oddiy) ⚪",
+        "auto": "Avto (Faqat Owner) 🔄"
+    }
+    mode_desc = mode_titles.get(btn_mode, "Premium (Animatsiyali) ✨")
 
     text = (
         f"{tg_icon('settings')} <b>Sozlamalar va Adminlar</b>\n\n"
         f"• {tg_icon('owner')} Bosh Admin: <code>{OWNER_TG_ID}</code>\n"
         f"• {tg_icon('admin')} Adminlar: <b>{len(admins)} nafar</b>\n"
-        f"• {tg_icon('clock')} Tekshiruv: <code>{check_time}</code> | {tg_icon('hourglass')} Sinov: <code>{trial_days} kun</code>"
+        f"• {tg_icon('clock')} Tekshiruv: <code>{check_time}</code> | {tg_icon('hourglass')} Sinov: <code>{trial_days} kun</code>\n"
+        f"• {tg_icon('tools')} Tugma emojisi: <b>{mode_desc}</b>"
     )
 
     rows = []
@@ -1890,6 +1909,14 @@ async def admin_settings_menu_handler(event: Message | CallbackQuery, state: FSM
         rows.append([
             make_btn("Tekshiruv vaqti", callback_data="admin_set_sched_time", emoji="clock"),
             make_btn("Sinov muddati", callback_data="admin_set_trial_days", emoji="hourglass")
+        ])
+        btn_labels = {
+            "1": "Tugma emojisi: Premium ✅",
+            "0": "Tugma emojisi: Standart ⚪",
+            "auto": "Tugma emojisi: Avto 🔄"
+        }
+        rows.append([
+            make_btn(btn_labels.get(btn_mode, "Tugma emojisi: Premium ✅"), callback_data="admin_toggle_btn_emojis", emoji="settings")
         ])
     rows.append([
         make_btn("Tizim holati (Server & DB)", callback_data="admin_sys_info", emoji="system")
@@ -1910,6 +1937,25 @@ async def admin_settings_menu_handler(event: Message | CallbackQuery, state: FSM
             await event.message.edit_text(text, reply_markup=kb)
         except TelegramBadRequest:
             pass
+
+
+@dp.callback_query(F.data == "admin_toggle_btn_emojis")
+async def toggle_btn_emojis_callback(callback: CallbackQuery, state: FSMContext):
+    if not is_owner(callback.from_user.id):
+        await callback.answer("🚫 Bu amal faqat Bosh Administrator uchun!", show_alert=True)
+        return
+    curr = await get_setting("button_custom_emojis", "1")
+    cycle = {"1": "0", "0": "auto", "auto": "1"}
+    nxt = cycle.get(curr, "1")
+    await set_setting("button_custom_emojis", nxt)
+
+    notifs = {
+        "1": "Tugma emojilari: Barcha uchun Premium (Animatsiyali) ga o'tkazildi!",
+        "0": "Tugma emojilari: Barcha uchun Standart (Oddiy) ga o'tkazildi!",
+        "auto": "Tugma emojilari: Avto rejimga o'tkazildi (Faqat Owner uchun Premium)!"
+    }
+    await callback.answer(f"✅ {notifs.get(nxt, 'Saqlandi!')}", show_alert=False)
+    await admin_settings_menu_handler(callback, state)
 
 
 @dp.callback_query(F.data == "admin_manage_users")
