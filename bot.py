@@ -3,13 +3,13 @@ import io
 import html
 from gemini_ai import (
     ask_gemini, extract_logins_from_image, extract_logins_from_document,
-    extract_logins_from_text, process_audio_voice,
+    extract_logins_from_text, extract_logins_intent_ai, process_audio_voice,
     extract_teacher_credentials, match_user_class_with_options,
     extract_teacher_from_image, extract_teacher_from_doc
 )
 from emaktab_auto import auto_detect_login
 from reset_and_register import EMaktabResetter
-from md_styler import render_styled_text
+from md_styler import render_styled_text, apply_premium_emojis
 
 import asyncio
 import json
@@ -20,7 +20,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.client.default import DefaultBotProperties
+from aiogram.client.default import Default, DefaultBotProperties
+from aiogram.client.session.middlewares.base import BaseRequestMiddleware
 from aiogram.enums import ChatAction, ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart, Command, CommandObject
@@ -55,7 +56,22 @@ url = os.getenv('URL', "https://emaktab-2025.onrender.com")
 Token = os.getenv('TOKEN', "8301189313:AAFApmwNLY9AlccUQtfXP5PfV0kvg0RBQr8")
 DB_PATH = '/home/ubuntu/emaktab_2025/database.sqlite3' if os.path.exists('/home/ubuntu/emaktab_2025/database.sqlite3') else '/home/xusanboyman/emaktab_2025/database.sqlite3'
 
+class PremiumEmojiMiddleware(BaseRequestMiddleware):
+    async def __call__(self, make_request, bot, method):
+        is_html = (
+            getattr(method, "parse_mode", None) in (ParseMode.HTML, "HTML")
+            or isinstance(getattr(method, "parse_mode", None), Default)
+        )
+        if is_html:
+            if hasattr(method, "text") and isinstance(method.text, str) and method.text:
+                method.text = apply_premium_emojis(method.text)
+            if hasattr(method, "caption") and isinstance(method.caption, str) and method.caption:
+                method.caption = apply_premium_emojis(method.caption)
+        return await make_request(bot, method)
+
+
 bot = Bot(token=Token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot.session.middleware(PremiumEmojiMiddleware())
 dp = Dispatcher()
 active_ai_tasks: dict[int, asyncio.Task] = {}
 
@@ -540,7 +556,7 @@ async def view_school_callback(callback: CallbackQuery):
 
     if grades:
         lines.append(f"{tg_icon('books', '📚')} <b>Sinflar:</b>")
-        now = datetime.now()
+        now = datetime.now(ZoneInfo("Asia/Tashkent"))
         for g in grades:
             cstats = await get_class_stats(school_id, g)
             c_tot = cstats["total"]
@@ -643,7 +659,7 @@ async def render_grades_control_panel(callback: CallbackQuery, school_id: int, p
         if sch_row:
             rows.append(sch_row)
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Tashkent"))
     for g in curr_grades:
         g_info = await get_grade_info(g)
         is_allowed = bool(getattr(g_info, 'is_allowed', False)) if g_info else False
@@ -679,7 +695,7 @@ async def render_grades_control_panel(callback: CallbackQuery, school_id: int, p
         nav_row.append(make_btn("Oldingi", callback_data=f"admin_grades_ctrl_{current_school.id}_{page - 1}", emoji="chart_down"))
     nav_row.append(make_btn(f"{page}/{total_pages}", callback_data="noop"))
     if page < total_pages:
-        nav_row.append(make_btn("Keyingi", callback_data=f"admin_grades_ctrl_{current_school.id}_{page + 1}", emoji="chart"))
+        nav_row.append(make_btn("Keyingi", callback_data=f"admin_grades_ctrl_{current_school.id}_{page + 1}", emoji="chart_up"))
     if nav_row:
         rows.append(nav_row)
 
@@ -804,9 +820,15 @@ async def admin_grade_all_logins_and_passwords_callback(callback: CallbackQuery)
     # format: allgrd_{school_id}_{grade} or agrd_all_{school_id}_{grade}
     parts = callback.data.split("_")
     if callback.data.startswith("allgrd_"):
+        if len(parts) < 3 or not parts[1].isdigit():
+            await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+            return
         school_id = int(parts[1])
         grade = parts[2]
     else:
+        if len(parts) < 4 or not parts[2].isdigit():
+            await callback.answer("Noto'g'ri ma'lumot", show_alert=True)
+            return
         school_id = int(parts[2])
         grade = parts[3]
 
@@ -1004,6 +1026,14 @@ async def admin_grade_logins_callback(callback: CallbackQuery):
 # Owner: Single Login Actions (View, Edit, Test, Delete)
 # -------------------------------------------------------------------------
 _STUDENT_PROFILE_CACHE = {}
+_MAX_PROFILE_CACHE_SIZE = 1500
+
+def _cache_student_profile(key: str, data: dict):
+    if len(_STUDENT_PROFILE_CACHE) >= _MAX_PROFILE_CACHE_SIZE:
+        # Evict oldest 300 entries
+        for old_k in list(_STUDENT_PROFILE_CACHE.keys())[:300]:
+            _STUDENT_PROFILE_CACHE.pop(old_k, None)
+    _STUDENT_PROFILE_CACHE[key] = data
 
 def format_name_from_username(username: str) -> str:
     cleaned = re.sub(r'\d+$', '', username.strip())
@@ -1077,7 +1107,7 @@ async def get_student_profile_data(username: str, password: str, cookie: str = N
         "grade": grade_name
     }
     if full_name:
-        _STUDENT_PROFILE_CACHE[key] = res_data
+        _cache_student_profile(key, res_data)
     return res_data
 
 
@@ -1382,8 +1412,8 @@ async def admin_do_delete_login_callback(callback: CallbackQuery):
     await delete_login(login_id)
     await callback.answer("Login muvaffaqiyatli o'chirildi!", show_alert=True)
 
-    callback.data = f"agrd_{school_id}_{grade}_{page}"
-    await admin_grade_logins_callback(callback)
+    fake_cb = callback.model_copy(update={"data": f"agrd_{school_id}_{grade}_{page}"})
+    await admin_grade_logins_callback(fake_cb)
 
 
 # -------------------------------------------------------------------------
@@ -1464,8 +1494,8 @@ async def admin_check_school_callback(callback: CallbackQuery):
     await send_request_main(payload)
     await callback.answer("✅ Tekshiruv yakunlandi!", show_alert=True)
 
-    callback.data = f"view_sch_{school_id}"
-    await view_school_callback(callback)
+    fake_cb = callback.model_copy(update={"data": f"view_sch_{school_id}"})
+    await view_school_callback(fake_cb)
 
 
 @dp.callback_query(F.data == "admin_run_all")
@@ -1476,7 +1506,6 @@ async def admin_run_all_callback(callback: CallbackQuery):
 
     await callback.answer("⏳ Barcha maktablar loginlari tekshirilmoqda...", show_alert=False)
     await login_schedule(callback.from_user.id)
-    await callback.answer("✅ Tekshiruv yakunlandi!", show_alert=True)
     await main_stats_callback(callback)
 
 
@@ -1580,7 +1609,8 @@ async def generate_telegraph_report_pages(is_admin: bool) -> list[dict]:
             is_allowed = bool(getattr(g_info, 'is_allowed', False)) if g_info else False
             is_paid = bool(getattr(g_info, 'is_paid', False)) if g_info else False
             allowed_until = getattr(g_info, 'allowed_until', None) if g_info else None
-            is_trial_active = bool(is_allowed and (not allowed_until or allowed_until >= datetime.now()))
+            now_tz = datetime.now(ZoneInfo("Asia/Tashkent"))
+            is_trial_active = bool(is_allowed and (not allowed_until or allowed_until >= now_tz))
 
             if is_paid:
                 status_ico = "🟢"
@@ -2407,8 +2437,11 @@ async def teacher_confirm_yes_handler(callback: CallbackQuery, state: FSMContext
     teacher_user = data.get("teacher_user", "")
 
     if not classes or not any("label" in c for c in classes):
-        u = data.get("teacher_user", "toxtasinovafarida")
-        p = data.get("teacher_pass", "Farida82")
+        u = data.get("teacher_user", "")
+        p = data.get("teacher_pass", "")
+        if not u or not p:
+            await callback.answer("O'qituvchi login ma'lumotlari topilmadi. Qaytadan /start bosing.", show_alert=True)
+            return
         resetter = EMaktabResetter()
         try:
             await callback.answer("Sinflar va hisoblar soni olinmoqda...")
@@ -2873,9 +2906,11 @@ async def execute_teacher_reset_process(message: Message, state: FSMContext, new
     selected_classes = data.get("selected_classes", [])
 
     if not target_accounts and selected_classes:
-        resetter_init = EMaktabResetter(school_id=s_id)
-        resetter_init.login_teacher(t_user, t_pass)
-        target_accounts = resetter_init.get_target_accounts(selected_classes, mode=target_mode)
+        def fetch_targets():
+            resetter_init = EMaktabResetter(school_id=s_id)
+            resetter_init.login_teacher(t_user, t_pass)
+            return resetter_init.get_target_accounts(selected_classes, mode=target_mode)
+        target_accounts = await asyncio.to_thread(fetch_targets)
 
     if not target_accounts:
         await state.clear()
@@ -3004,8 +3039,12 @@ async def execute_teacher_reset_process(message: Message, state: FSMContext, new
 
             buttons = []
             if single_grade:
-                buttons.append([make_btn(f"📋 {single_grade}-sinf barcha login va parollari", callback_data=f"allgrd_1_{single_grade}", emoji="memo")])
-            buttons.append([make_btn("🏫 Maktablar bo'limi", callback_data="schools_list", emoji="school")])
+                sch_m = re.search(r'(\d+)', s_name)
+                sch_num = int(sch_m.group(1)) if sch_m else 14
+                db_sch = await get_or_create_school_by_number(sch_num, s_name)
+                actual_sch_id = db_sch.id if db_sch else 1
+                buttons.append([make_btn(f"📋 {single_grade}-sinf barcha login va parollari", callback_data=f"allgrd_{actual_sch_id}_{single_grade}", emoji="memo")])
+            buttons.append([make_btn("🏫 Maktablar bo'limi", callback_data="list_schools", emoji="school")])
             buttons.append([make_btn("Asosiy Menyu", callback_data="main_menu", emoji="back")])
 
             await status_msg.edit_text(
@@ -3026,6 +3065,7 @@ async def execute_teacher_reset_process(message: Message, state: FSMContext, new
             )
 
     except Exception as e:
+        await state.clear()
         await status_msg.edit_text(f"❌ <b>Jarayonda xatolik yuz berdi:</b> {e}")
 
 
@@ -3199,31 +3239,30 @@ async def batch_add_handler(message: Message):
 
     msg = await message.answer(f"⏳ {len(valid_entries)} ta login tekshirilmoqda va sinflari aniqlanmoqda...")
 
-    schools = await get_all_schools()
-    s_count = 0
+    sem = asyncio.Semaphore(5)
 
-    for u, p in valid_entries:
-        detect_res = await auto_detect_login(u, p)
-        succ = detect_res.get("success", False)
-        cookie = detect_res.get("cookie", "")
-        grade = detect_res.get("grade", "1A")
-        school_num = detect_res.get("school_number", 14)
+    async def process_entry(u, p):
+        async with sem:
+            detect_res = await auto_detect_login(u, p)
+            succ = detect_res.get("success", False)
+            cookie = detect_res.get("cookie", "")
+            grade = detect_res.get("grade", "1A")
+            school_num = detect_res.get("school_number", 14)
 
-        target_school = await get_or_create_school_by_number(school_number=school_num, place=f"{school_num}-maktab")
-        s_id = target_school.id
+            target_school = await get_or_create_school_by_number(school_number=school_num, place=f"{school_num}-maktab")
+            await create_login(
+                username=u,
+                password=p,
+                last_login=succ,
+                cookie=cookie,
+                grade=grade,
+                school_number_id=target_school.id,
+                tg_id=message.from_user.id
+            )
+            return succ
 
-        if succ:
-            s_count += 1
-
-        await create_login(
-            username=u,
-            password=p,
-            last_login=succ,
-            cookie=cookie,
-            grade=grade,
-            school_number_id=s_id,
-            tg_id=message.from_user.id
-        )
+    results = await asyncio.gather(*(process_entry(u, p) for u, p in valid_entries))
+    s_count = sum(1 for r in results if r)
 
     admin = is_owner(message.from_user.id)
     await msg.edit_text(
@@ -3263,7 +3302,9 @@ CRED_STOPWORDS = {
     'all', 'those', 'for', 'instead', 'use', 'login', 'logins', 'loginlar',
     'parol', 'parollar', 'password', 'passwords', 'user', 'users', 'foydalanuvchi',
     'barcha', 'hamma', 'sinf', 'maktab', 'haqida', 'bilan', 'deb', 'qilib',
-    'of', 'to', 'in', 'as', 'the', 'at', 'by', 'from', 'with', 'document', 'photo', 'fayl'
+    'of', 'to', 'in', 'as', 'the', 'at', 'by', 'from', 'with', 'document', 'photo', 'fayl',
+    'yoki', 'noto\'g\'ri', 'notogri', 'noto', 'xato', 'xatolik', 'kirilmagan',
+    'kirilmaganlar', 'muvaffaqiyatli', 'natija', 'sabab', 'iltimos', 'kirildi'
 }
 
 def parse_credentials_from_text(text: str) -> list[tuple[str, str]]:
@@ -3282,8 +3323,17 @@ parol: 12345
     if text_clean.startswith("add "):
         text_clean = text_clean[4:].strip()
 
+    # Exclude error reporting lines from previous bot messages
+    clean_lines = []
+    for line in text_clean.splitlines():
+        line_low = line.strip().lower()
+        if "login yoki parol" in line_low or "natija:" in line_low or "kirilmaganlar" in line_low:
+            continue
+        clean_lines.append(line)
+    filtered_text = "\n".join(clean_lines)
+
     # Pattern 1: Explicit login ... parol ...
-    p_lp = re.findall(r'(?:login|foydalanuvchi|user)?[:\s]*([a-zA-Z0-9._-]+)\s+(?:parol|password|kod|pass)[:\s]*([^\s,;]+)', text_clean, re.IGNORECASE)
+    p_lp = re.findall(r'(?:login|foydalanuvchi|user)?[:\s]*([a-zA-Z0-9._-]+)\s+(?:parol|password|kod|pass)[:\s]*([^\s,;]+)', filtered_text, re.IGNORECASE)
     if p_lp:
         for u, p in p_lp:
             if u.lower() not in CRED_STOPWORDS and p.lower() not in CRED_STOPWORDS and len(u) >= 3 and len(p) >= 3:
@@ -3368,41 +3418,48 @@ async def handle_logins_batch_execution(message: Message, credentials: list[tupl
     status_msg = await message.answer(wait_text)
     await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
 
-    succ_list = []
-    fail_list = []
+    sem = asyncio.Semaphore(5)
 
-    for u, p in credentials:
-        detect_res = await auto_detect_login(u, p)
-        succ = detect_res.get("success", False)
-        cookie = detect_res.get("cookie", "")
-        grade = detect_res.get("grade", "1A")
-        full_name = detect_res.get("full_name", "")
-        school_num = detect_res.get("school_number", 14)
-        err_msg = detect_res.get("error", "Login yoki parol noto'g'ri")
+    async def verify_one(u, p):
+        async with sem:
+            detect_res = await auto_detect_login(u, p)
+            succ = detect_res.get("success", False)
+            cookie = detect_res.get("cookie", "")
+            grade = detect_res.get("grade", "1A")
+            full_name = detect_res.get("full_name", "")
+            school_num = detect_res.get("school_number", 14)
+            err_msg = detect_res.get("error", "Login yoki parol noto'g'ri")
 
-        if succ:
-            target_school = await get_or_create_school_by_number(school_number=school_num, place=f"{school_num}-maktab")
-            await ensure_grade_trial(grade)
-            await create_login(
-                username=u,
-                password=p,
-                last_login=succ,
-                cookie=cookie,
-                grade=grade,
-                school_number_id=target_school.id,
-                tg_id=message.from_user.id
-            )
-            succ_list.append({
-                "username": u,
-                "grade": grade,
-                "school": school_num,
-                "name": full_name or "O'quvchi"
-            })
+            if succ:
+                target_school = await get_or_create_school_by_number(school_number=school_num, place=f"{school_num}-maktab")
+                await ensure_grade_trial(grade)
+                await create_login(
+                    username=u,
+                    password=p,
+                    last_login=succ,
+                    cookie=cookie,
+                    grade=grade,
+                    school_number_id=target_school.id,
+                    tg_id=message.from_user.id
+                )
+                return True, {
+                    "username": u,
+                    "grade": grade,
+                    "school": school_num,
+                    "name": full_name or "O'quvchi"
+                }
+            else:
+                return False, {
+                    "username": u,
+                    "reason": err_msg
+                }
+
+    results = await asyncio.gather(*(verify_one(u, p) for u, p in credentials))
+    for ok, data in results:
+        if ok:
+            succ_list.append(data)
         else:
-            fail_list.append({
-                "username": u,
-                "reason": err_msg
-            })
+            fail_list.append(data)
 
     admin = is_owner(message.from_user.id)
 
@@ -3441,7 +3498,13 @@ async def handle_logins_batch_execution(message: Message, credentials: list[tupl
                 lines.append(f"• <code>{item['username']}</code> ({item['reason']})")
         resp_text = "\n".join(lines)
 
-    await status_msg.edit_text(resp_text, reply_markup=main_inline_keyboard(admin))
+    try:
+        await status_msg.edit_text(resp_text, reply_markup=main_inline_keyboard(admin))
+    except Exception:
+        try:
+            await status_msg.edit_text(re.sub(r'<[^>]+>', '', resp_text), reply_markup=main_inline_keyboard(admin), parse_mode=None)
+        except Exception:
+            pass
 
 
 @dp.stopped_message_generation()
@@ -3466,22 +3529,28 @@ async def ai_chat_handler(message: Message, state: FSMContext):
     if curr_state:
         return
 
-    # 1. Check if user replied to a message specifying a new password for logins in that message
+    # 1. AI-powered intelligent login & credentials extraction (handles overrides, lists, replies, quotes)
+    replied_text = ""
     if message.reply_to_message:
         replied_text = message.reply_to_message.text or message.reply_to_message.caption or ""
-        new_pwd = extract_password_from_override_text(message.text)
-        if new_pwd and replied_text:
-            extracted_users = extract_usernames_from_text(replied_text)
-            if extracted_users:
-                creds = [(u, new_pwd) for u in extracted_users]
-                await message.answer(
-                    f"🔄 <b>{len(extracted_users)} ta</b> login uchun yangi parol (<code>{new_pwd}</code>) qabul qilindi.\n"
-                    f"eMaktab orqali tekshirilib, bazaga kiritilmoqda..."
-                )
-                await handle_logins_batch_execution(message, creds)
-                return
 
-    # 2. Check if user sent login and password directly in message!
+    full_check_text = (message.text or "") + " " + (replied_text or "")
+    text_lower = full_check_text.lower()
+
+    has_login_signals = (
+        bool(message.reply_to_message)
+        or any(sig in text_lower for sig in [
+            'use ', 'parol', 'password', 'login', 'for all', 'hamma', 'qilib', 'kirilmagan', 'kirildi', '•'
+        ])
+    )
+
+    if has_login_signals:
+        ai_creds = await extract_logins_intent_ai(message.text, replied_text)
+        if ai_creds:
+            await handle_logins_batch_execution(message, ai_creds)
+            return
+
+    # 2. Fast regex fallback for simple direct messages (e.g. "a.abduraximov0602201 12345678v")
     creds = parse_credentials_from_text(message.text)
     if creds:
         await handle_logins_batch_execution(message, creds)

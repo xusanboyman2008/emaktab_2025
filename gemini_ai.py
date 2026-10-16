@@ -3,6 +3,7 @@ import os
 import json
 import sqlite3
 import re
+from pathlib import Path
 
 GEMINI_API_KEYS = [
     os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Ih3gXnAjLQbEFdU1mh_-fGMbC0qJ7FuCGOBAhmSGmr5g"),
@@ -27,7 +28,7 @@ def mark_key_exhausted(exhausted_key: str):
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
 
-DB_PATH = '/home/ubuntu/emaktab_2025/database.sqlite3' if os.path.exists('/home/ubuntu/emaktab_2025/database.sqlite3') else '/home/xusanboyman/emaktab_2025/database.sqlite3'
+DB_PATH = str(Path(__file__).parent / "database.sqlite3")
 
 def tool_get_system_stats():
     """eMaktab tizimidagi barcha maktablar, sinflar, loginlar soni, kirilgan va kirilmaganlar umumiy statistikasini qaytaradi."""
@@ -894,6 +895,75 @@ async def extract_logins_from_text(raw_text: str) -> list[dict]:
             except Exception as e:
                 continue
 
+
+    return []
+
+
+async def extract_logins_intent_ai(text: str, reply_text: str = "") -> list[tuple[str, str]]:
+    """
+    Uses Gemini AI to intelligently extract student logins and their intended passwords
+    from user messages, quoted messages, lists, overrides ('use 12345678v for all', etc.).
+    Returns a list of (username, password) tuples.
+    Returns [] if no login intent or credentials found.
+    """
+    raw_content = ""
+    if reply_text:
+        raw_content += f"Javob berilgan (reply) xabar:\n«««\n{reply_text[:15000]}\n»»»\n\n"
+    raw_content += f"Foydalanuvchi xabari:\n«««\n{text[:15000]}\n»»»"
+
+    prompt = (
+        "Quyidagi foydalanuvchi xabaridan (va agar mavjud bo'lsa reply qilingan xabardan) eMaktab loginlari va parollarini ajratib ol.\n"
+        "QOIDALAR:\n"
+        "1. Agar 'use <parol> for all', 'hamma loginlarga <parol>', '<parol> qilib kir' kabi ko'rsatma bo'lsa, ro'yxatdagi har bir haqiqiy loginga shu parolni biriktir.\n"
+        "2. 'Kirilmaganlar', 'Muvaffaqiyatli', 'Natija', 'Jami', 'Xato', 'Login', 'Parol', 'Sinf', 'Maktab' sarlavhalari LOGIN EMAS!\n"
+        "3. '(Login yoki parol noto'g'ri)' xatolik sababi, login yoki parol emas!\n"
+        "4. 'yoki', 'va', 'bilan', 'for', 'all', 'those', 'use', 'instead' so'zlari LOGIN EMAS!\n"
+        "5. Agar hech qanday login/parol kiritish yoki yangilash maqsadi bo'lmasa (oddiy savol, suhbat bo'lsa), bo'sh ro'yxat qaytar: {\"logins\": []}\n\n"
+        "Faqat quyidagi aniq JSON formatida qaytar:\n"
+        "{\"logins\": [{\"username\": \"login1\", \"password\": \"parol1\"}, ...]}\n\n"
+        "Matn:\n" + raw_content
+    )
+
+    for api_key in get_ordered_api_keys():
+        for model_name in FALLBACK_MODELS:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}]
+            }
+            try:
+                timeout = aiohttp.ClientTimeout(total=20, connect=5)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.post(url, json=payload) as resp:
+                        if resp.status in (429, 403):
+                            mark_key_exhausted(api_key)
+                            break
+                        if resp.status == 200:
+                            data = await resp.json()
+                            candidates = data.get("candidates", [])
+                            if candidates:
+                                raw_json = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                                if "```json" in raw_json:
+                                    raw_json = raw_json.split("```json")[1].split("```")[0].strip()
+                                elif "```" in raw_json:
+                                    raw_json = raw_json.split("```")[1].split("```")[0].strip()
+                                parsed = json.loads(raw_json)
+                                raw_list = parsed.get("logins", [])
+                                clean_list = []
+                                stopwords = {
+                                    'kirilmaganlar', 'muvaffaqiyatli', 'natija', 'jami', 'xato',
+                                    'login', 'parol', 'sinf', 'maktab', 'yoki', 'va', 'bilan',
+                                    'all', 'those', 'for', 'use', 'instead'
+                                }
+                                for item in raw_list:
+                                    u = str(item.get("username", "")).strip()
+                                    p = str(item.get("password", "")).strip()
+                                    if " " in u and not u.startswith("http"):
+                                        u = u.replace(" ", "")
+                                    if u and p and u.lower() not in stopwords and len(u) >= 3 and len(p) >= 3:
+                                        clean_list.append((u, p))
+                                return clean_list
+            except Exception as e:
+                continue
 
     return []
 
