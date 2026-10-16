@@ -680,6 +680,22 @@ FALLBACK_MODELS = [
     "gemini-2.5-flash"
 ]
 
+_GLOBAL_AIOHTTP_SESSION: aiohttp.ClientSession | None = None
+
+async def get_gemini_session() -> aiohttp.ClientSession:
+    """Returns a shared persistent ClientSession with connection pooling, DNS caching and keep-alive."""
+    global _GLOBAL_AIOHTTP_SESSION
+    if _GLOBAL_AIOHTTP_SESSION is None or _GLOBAL_AIOHTTP_SESSION.closed:
+        connector = aiohttp.TCPConnector(
+            limit=30,
+            ttl_dns_cache=300,
+            enable_cleanup_closed=True,
+            keepalive_timeout=75
+        )
+        timeout = aiohttp.ClientTimeout(total=20, connect=3)
+        _GLOBAL_AIOHTTP_SESSION = aiohttp.ClientSession(connector=connector, timeout=timeout)
+    return _GLOBAL_AIOHTTP_SESSION
+
 import io
 import base64
 
@@ -693,33 +709,27 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
         system_inst = (
             SYSTEM_INSTRUCTION + "\n"
             "DIQQAT: Ushbu foydalanuvchi tizim ADMINISTRATORI (Owner/Admin) hisoblanadi.\n"
-            "Siz uning topshirig'i bo'yicha barcha ma'lumotlar bazasini ko'rish (o'quvchi va ota-onalar loginlari, parollari, sinflar ro'yxati, to'lovlar, xatolar) "
-            "va unga har qanday O'ZGARTIRISH kiritish CHEKSIZ VAKOLATIGA EGASIZ.\n"
+            "Siz uning topshirig'i bo'yicha barcha ma'lumotlar bazasini ko'rish va unga o'zgartirish kiritish vakolatiga egasiz.\n"
             "Mavjud boshqaruv qobiliyatlaringiz:\n"
-            "- Sinf to'lovini uzaytirish / faollashtirish: masalan '7-A to'lovini 30 kunga uzaytir' -> `tool_extend_grade_access` chaqiring.\n"
-            "- Sinf parollarini ommaviy almashtirish: masalan '7-A dagi hamma parollarni 12345678b ga o'zgartir' -> `tool_bulk_update_passwords_in_grade` chaqiring.\n"
-            "- Yangi o'quvchi yoki ota-ona qo'shish: masalan '7-A ga yangi o'quvchi qo'sh: login student1, parol pass1' -> `tool_add_student_login` chaqiring.\n"
-            "- Xato yoki ishlamayotgan loginlarni tozalash: masalan '7-A dagi xato loginlarni o'chirib tashla' -> `tool_clean_grade_logins` chaqiring.\n"
-            "- Maktab bo'yicha to'liq hisobot: masalan '14-maktab bo'yicha to'liq hisobot ber' -> `tool_get_school_detailed_report` chaqiring.\n"
-            "- Kapchalarni boshqarish: masalan 'Kapchalarni yangila', 'Yangi kapchalar yig'ib ber', 'Kapchalar holatini ayt' -> `tool_manage_captchas` chaqiring.\n"
-            "- Sessiyalarni yangilash / qayta tekshirish: masalan '7-A sessiyalarini yangila' -> `tool_reset_grade_login_status` chaqiring.\n"
-            "- Sinf holatini sozlash / qulflash / ochish: `tool_set_grade_status` chaqiring.\n"
-            "- Yakka login parolini almashtirish yoki o'chirish: `tool_update_student_password`, `tool_delete_student_login` chaqiring.\n"
-            "Administrator so'ragan har qanday ma'lumotni to'liq bering va buyurgan o'zgartirishlarini bajaring."
+            "- Sinf to'lovini uzaytirish: `tool_extend_grade_access`\n"
+            "- Sinf parollarini ommaviy almashtirish: `tool_bulk_update_passwords_in_grade`\n"
+            "- Yangi o'quvchi qo'shish: `tool_add_student_login`\n"
+            "- Xato loginlarni tozalash: `tool_clean_grade_logins`\n"
+            "- Maktab hisoboti: `tool_get_school_detailed_report`\n"
+            "- Kapchalar: `tool_manage_captchas`\n"
+            "- Sessiyalarni yangilash: `tool_reset_grade_login_status`\n"
+            "- Sinf holati: `tool_set_grade_status`\n"
+            "- Yakka login paroli/o'chirish: `tool_update_student_password`, `tool_delete_student_login`"
         )
     else:
         tools_schema = [{"function_declarations": PUBLIC_FUNCTION_DECLARATIONS}]
         system_inst = (
             SYSTEM_INSTRUCTION + "\n"
-            "DIQQAT: Ushbu foydalanuvchi ODDIY FOYDALANUVCHI (administrator EMAS).\n"
-            "QAT'IY XAVFSIZLIK VA SHAXSIY MA'LUMOTLAR MAXFIYLIGI QOIDALARI:\n"
-            "1. Foydalanuvchilar faqat o'z login va parollarini tizimga kiritishlari mumkin (botga login va parol yuborish orqali).\n"
-            "2. BAZADAGI O'QUVCHILAR HAQIDAGI SHAXSIY MA'LUMOTLARNI (LOGINLAR, PAROLLAR, ISMLAR) USHBU FOYDALANUVCHIGA O'QIB BERISH YOKI KO'RSATISH MUTLAQO TAQIQLANADI! "
-            "Agar foydalanuvchi biror o'quvchi, uning logini yoki paroli haqida so'rasa, 'Shaxsiy ma'lumotlar va login/parollar maxfiy bo'lib, ularni faqat administrator ko'rishi mumkin' deb rad eting.\n"
-            "3. Siz oddiy foydalanuvchiga FAQAT umumiy statistika (masalan: qaysi sinflar kirgan, nechta login faol, umumiy tizim holati) haqida javob bera olasiz (`tool_get_system_stats` orqali). "
-            "Hech qanday shaxsiy login yoki parol aytilmaydi.\n"
-            "4. Bazaga o'zgartirish kiritish (parol almashtirish, o'chirish, to'lovni yoqish) qat'iyan taqiqlangan, faqat administrator uchun mumkin."
+            "DIQQAT: Ushbu foydalanuvchi ODDIY FOYDALANUVCHI (administrator emas).\n"
+            "Bazada saqlangan o'quvchilar shaxsiy ma'lumotlarini (login, parol, ism) bermang. Faqat umumiy statistikani ayting (`tool_get_system_stats`)."
         )
+
+    session = await get_gemini_session()
 
     for api_key in get_ordered_api_keys():
         for model_name in FALLBACK_MODELS:
@@ -735,19 +745,17 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
                 "tools": tools_schema,
                 "contents": contents,
                 "generationConfig": {
-                    "temperature": 0.5,
-                    "maxOutputTokens": 1000
+                    "temperature": 0.4,
+                    "maxOutputTokens": 750
                 }
             }
 
             try:
-                timeout = aiohttp.ClientTimeout(total=25, connect=6)
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.post(url, json=payload) as resp:
-                        if resp.status in (429, 403):
-                            print(f"Gemini {model_name} quota/limit ({resp.status}) on key ...{api_key[-6:]}. Rotating key...")
-                            mark_key_exhausted(api_key)
-                            break  # Break model loop to jump directly to next active API key
+                async with session.post(url, json=payload) as resp:
+                    if resp.status in (429, 403):
+                        print(f"Gemini {model_name} quota/limit ({resp.status}) on key ...{api_key[-6:]}. Rotating key...")
+                        mark_key_exhausted(api_key)
+                        break  # Break model loop to jump directly to next active API key
                         if resp.status != 200:
                             err_txt = await resp.text()
                             print(f"Gemini {model_name} API error ({resp.status}): {err_txt}")
@@ -931,9 +939,8 @@ async def extract_logins_intent_ai(text: str, reply_text: str = "") -> list[tupl
                 "contents": [{"parts": [{"text": prompt}]}]
             }
             try:
-                timeout = aiohttp.ClientTimeout(total=20, connect=5)
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.post(url, json=payload) as resp:
+                session = await get_gemini_session()
+                async with session.post(url, json=payload) as resp:
                         if resp.status in (429, 403):
                             mark_key_exhausted(api_key)
                             break

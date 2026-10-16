@@ -3565,11 +3565,15 @@ async def ai_chat_handler(message: Message, state: FSMContext):
     full_check_text = (message.text or "") + " " + (replied_text or "")
     text_lower = full_check_text.lower()
 
+    # Clear signals that user intends to process/override logins or credentials
     has_login_signals = (
-        bool(message.reply_to_message)
-        or any(sig in text_lower for sig in [
-            'use ', 'parol', 'password', 'login', 'for all', 'hamma', 'qilib', 'kirilmagan', 'kirildi', '•'
-        ])
+        "for all" in text_lower
+        or "deb kir" in text_lower
+        or "parol qilib" in text_lower
+        or "paroli qilib" in text_lower
+        or "loginlar paroli" in text_lower
+        or (message.text and bool(re.search(r'•\s*[a-zA-Z0-9._-]+\s*\(', message.text)))
+        or (replied_text and bool(re.search(r'•\s*[a-zA-Z0-9._-]+\s*\(', replied_text)) and any(w in message.text.lower() for w in ('use', 'parol', 'pass', 'all', 'deb', 'qilib')))
     )
 
     if has_login_signals:
@@ -3584,27 +3588,9 @@ async def ai_chat_handler(message: Message, state: FSMContext):
         await handle_logins_batch_execution(message, creds)
         return
 
-    # 3. Otherwise, handle via Gemini AI with Mira Thinking indicator & Live Timer
+    # 3. Blazing-fast Gemini AI handler (under 1-2 seconds)
     user_name = message.from_user.full_name or message.from_user.first_name or ""
     await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
-
-    chat_id = message.chat.id
-    draft_id = random.randint(100000, 999999)
-    think_ico = tg_icon("thinking", "💭")
-
-    # Send visible Mira-style animated Thinking message bubble with custom emoji
-    thinking_msg = await message.answer(f"{think_ico} Thinking\n0s", parse_mode="HTML")
-
-    # Also register native Telegram draft if supported
-    try:
-        await message.bot.send_message_draft(
-            chat_id=chat_id,
-            draft_id=draft_id,
-            text="",
-            can_stop=True
-        )
-    except Exception:
-        pass
 
     prompt = message.text
     if message.reply_to_message:
@@ -3612,46 +3598,36 @@ async def ai_chat_handler(message: Message, state: FSMContext):
         if replied_text:
             prompt = f"[Foydalanuvchi quyidagi xabarga javob bermoqda:\n«««\n{replied_text[:2000]}\n»»»]\n\n{message.text}"
 
-    start_time = asyncio.get_event_loop().time()
+    draft_id = random.randint(100000, 999999)
+    think_ico = tg_icon("thinking", "💭")
     is_admin = await is_admin_or_owner(message.from_user.id)
     ai_task = asyncio.create_task(ask_gemini(prompt, user_name=user_name, is_admin=is_admin))
     active_ai_tasks[draft_id] = ai_task
 
+    thinking_msg = None
     try:
-        while not ai_task.done():
-            await asyncio.sleep(1)
-            if not ai_task.done():
-                elapsed = int(asyncio.get_event_loop().time() - start_time)
-                try:
-                    await thinking_msg.edit_text(f"{think_ico} Thinking\n{elapsed}s", parse_mode="HTML")
-                except Exception:
-                    pass
-                try:
-                    await message.bot.send_message_draft(
-                        chat_id=chat_id,
-                        draft_id=draft_id,
-                        text=f"{think_ico} Thinking\n{elapsed}s",
-                        parse_mode="HTML",
-                        can_stop=True
-                    )
-                except Exception:
-                    pass
-
-        raw_reply = await ai_task
+        # Fast path: wait up to 1.3s for instant response delivery
+        try:
+            raw_reply = await asyncio.wait_for(asyncio.shield(ai_task), timeout=1.3)
+        except asyncio.TimeoutError:
+            # If AI requires longer processing (e.g. database tool query), show thinking bubble
+            thinking_msg = await message.answer(f"{think_ico} Thinking...", parse_mode="HTML")
+            raw_reply = await ai_task
     except asyncio.CancelledError:
         return
     finally:
         active_ai_tasks.pop(draft_id, None)
 
-
-
     styled_reply = render_styled_text(raw_reply)
 
-    try:
-        await thinking_msg.edit_text(styled_reply, parse_mode="HTML")
-    except Exception:
+    if thinking_msg:
         try:
+            await thinking_msg.edit_text(styled_reply, parse_mode="HTML")
+        except Exception:
             await thinking_msg.edit_text(raw_reply, parse_mode=None)
+    else:
+        try:
+            await message.answer(styled_reply, parse_mode="HTML")
         except Exception:
             await message.answer(raw_reply, parse_mode=None)
 
