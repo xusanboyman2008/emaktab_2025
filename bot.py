@@ -9,7 +9,10 @@ from gemini_ai import (
 )
 from emaktab_auto import auto_detect_login
 from reset_and_register import EMaktabResetter
-from md_styler import render_styled_text, apply_premium_emojis, EMOJI_MAP
+from md_styler import (
+    render_styled_text, apply_premium_emojis, EMOJI_MAP,
+    add_custom_emoji, delete_custom_emoji, list_custom_emojis
+)
 
 import asyncio
 import json
@@ -22,7 +25,7 @@ from zoneinfo import ZoneInfo
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import Default, DefaultBotProperties
 from aiogram.client.session.middlewares.base import BaseRequestMiddleware
-from aiogram.enums import ChatAction, ParseMode
+from aiogram.enums import ChatAction, ParseMode, MessageEntityType
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
@@ -85,15 +88,20 @@ def apply_premium_to_markup(markup, enable_custom: bool = True):
 
 class PremiumEmojiMiddleware(BaseRequestMiddleware):
     async def __call__(self, make_request, bot, method):
+        # Always format outgoing text and captions with animated custom emojis
+        curr_pm = getattr(method, "parse_mode", None)
         is_html = (
-            getattr(method, "parse_mode", None) in (ParseMode.HTML, "HTML")
-            or isinstance(getattr(method, "parse_mode", None), Default)
+            curr_pm in (ParseMode.HTML, "HTML")
+            or isinstance(curr_pm, Default)
+            or curr_pm is None
         )
         if is_html:
             if hasattr(method, "text") and isinstance(method.text, str) and method.text:
                 method.text = apply_premium_emojis(method.text)
+                method.parse_mode = ParseMode.HTML
             if hasattr(method, "caption") and isinstance(method.caption, str) and method.caption:
                 method.caption = apply_premium_emojis(method.caption)
+                method.parse_mode = ParseMode.HTML
 
         if hasattr(method, "reply_markup") and method.reply_markup:
             btn_mode = await get_setting("button_custom_emojis", "1")
@@ -1916,7 +1924,8 @@ async def admin_settings_menu_handler(event: Message | CallbackQuery, state: FSM
             "auto": "Tugma emojisi: Avto 🔄"
         }
         rows.append([
-            make_btn(btn_labels.get(btn_mode, "Tugma emojisi: Premium ✅"), callback_data="admin_toggle_btn_emojis", emoji="settings")
+            make_btn(btn_labels.get(btn_mode, "Tugma emojisi: Premium ✅"), callback_data="admin_toggle_btn_emojis", emoji="settings"),
+            make_btn("Premium Emojilar", callback_data="admin_view_emojis", emoji="flash")
         ])
     rows.append([
         make_btn("Tizim holati (Server & DB)", callback_data="admin_sys_info", emoji="system")
@@ -1956,6 +1965,38 @@ async def toggle_btn_emojis_callback(callback: CallbackQuery, state: FSMContext)
     }
     await callback.answer(f"✅ {notifs.get(nxt, 'Saqlandi!')}", show_alert=False)
     await admin_settings_menu_handler(callback, state)
+
+
+@dp.callback_query(F.data == "admin_view_emojis")
+async def admin_view_emojis_callback(callback: CallbackQuery, state: FSMContext):
+    if not await is_admin_or_owner(callback.from_user.id):
+        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
+        return
+    res = list_custom_emojis()
+    admin_emojis = res.get("admin_emojilari", {})
+    text = (
+        f"🎨 <b>Barcha Premium Custom Emojilar:</b>\n\n"
+        f"• Jami tizimda faol: <b>{res.get('jami_emojilar_soni')} ta</b>\n"
+        f"• Siz (admin) qo'shgan emojilar: <b>{len(admin_emojis)} ta</b>\n\n"
+    )
+    if admin_emojis:
+        text += "<b>Admin qo'shgan emojilar:</b>\n"
+        for ch, cid in admin_emojis.items():
+            text += f"• {ch} -> <code>{cid}</code>\n"
+        text += "\n"
+    text += (
+        "💡 <b>Yangi emoji qo'shish yo'llari:</b>\n"
+        "1. Botga to'g'ridan-to'g'ri Telegram Premium emojisini yuboring\n"
+        "2. Yoki: <code>/add_emoji [emoji] [custom_id]</code>\n"
+        "3. Yoki AI ga yozing: <i>'mana bu emojiga yangi ID qo'sh...'</i>"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [make_btn("Sozlamalarga qaytish", callback_data="admin_settings_menu", emoji="settings")]
+    ])
+    try:
+        await callback.message.edit_text(text, reply_markup=kb)
+    except TelegramBadRequest:
+        pass
 
 
 @dp.callback_query(F.data == "admin_manage_users")
@@ -3597,11 +3638,135 @@ async def stopped_message_generation_handler(event: MessageGenerationStopped):
         pass
 
 
+# -------------------------------------------------------------------------
+# Dynamic Premium Custom Emoji Commands & Handlers
+# -------------------------------------------------------------------------
+@dp.message(Command("add_emoji"))
+async def add_emoji_command_handler(message: Message, command: CommandObject):
+    if not await is_admin_or_owner(message.from_user.id):
+        return
+
+    # 1. Custom emoji entity directly sent with command
+    if message.entities:
+        custom_entities = [e for e in message.entities if e.type == MessageEntityType.CUSTOM_EMOJI and e.custom_emoji_id]
+        if custom_entities:
+            added = []
+            for ce in custom_entities:
+                ch = ce.extract_from(message.text)
+                cid = ce.custom_emoji_id
+                r = add_custom_emoji(ch, cid)
+                if r.get("success"):
+                    added.append((ch, cid))
+            if added:
+                items = "\n".join([f"• {ch} -> ID: <code>{cid}</code>" for ch, cid in added])
+                await message.answer(
+                    f"✅ <b>Yangi Premium Custom Emoji saqlandi!</b>\n\n{items}\n\n"
+                    f"✨ <i>Ushbu animatsiyali emojilar barcha xabarlar va tugmalarda avtomatik ishlatiladi.</i>"
+                )
+                return
+
+    # 2. Text arguments: /add_emoji 🚀 5429398777419014515 [label]
+    args = (command.args or "").strip().split()
+    if len(args) >= 2:
+        emoji_char = args[0]
+        emoji_id = args[1]
+        label = args[2] if len(args) > 2 else ""
+        res = add_custom_emoji(emoji_char, emoji_id, label)
+        if res.get("success"):
+            await message.answer(
+                f"✅ <b>Yangi Premium Custom Emoji saqlandi!</b>\n"
+                f"• {emoji_char} -> ID: <code>{emoji_id}</code>\n\n"
+                f"✨ <i>Barcha xabarlar va menyu tugmalarida avtomatik ishlatiladi.</i>"
+            )
+        else:
+            await message.answer(f"❌ Xatolik: {res.get('error')}")
+        return
+
+    await message.answer(
+        "ℹ️ <b>Yangi Premium Custom Emoji qo'shish yo'riqnomasi:</b>\n\n"
+        "1. Shunchaki botga Telegram Premium emojisini to'g'ridan-to'g'ri yuboring.\n"
+        "2. Yoki buyruq orqali: <code>/add_emoji [emoji] [custom_id]</code>\n"
+        "Masalan: <code>/add_emoji 🚀 5429398777419014515</code>\n"
+        "3. Yoki AI ga yozing: <i>'mana bu emojiga yangi ID qo'sh: 🚀 5429398777419014515'</i>"
+    )
+
+
+@dp.message(Command("emojis", "list_emojis"))
+async def list_emojis_command_handler(message: Message):
+    if not await is_admin_or_owner(message.from_user.id):
+        return
+    res = list_custom_emojis()
+    admin_emojis = res.get("admin_emojilari", {})
+    text = (
+        f"🎨 <b>Barcha Premium Custom Emojilar:</b>\n"
+        f"• Jami tizimda faol: <b>{res.get('jami_emojilar_soni')} ta</b>\n"
+        f"• Siz (admin) qo'shgan emojilar: <b>{len(admin_emojis)} ta</b>\n\n"
+    )
+    if admin_emojis:
+        text += "<b>Admin qo'shgan emojilar:</b>\n"
+        for ch, cid in admin_emojis.items():
+            text += f"• {ch} -> <code>{cid}</code>\n"
+        text += "\n"
+    text += (
+        "💡 <i>Yangi emoji qo'shish uchun shunchaki premium emojini botga yuboring, "
+        "yoki <code>/add_emoji [emoji] [id]</code> buyrug'idan foydalaning.</i>"
+    )
+    await message.answer(text)
+
+
+@dp.message(Command("del_emoji"))
+async def del_emoji_command_handler(message: Message, command: CommandObject):
+    if not await is_admin_or_owner(message.from_user.id):
+        return
+    args = (command.args or "").strip()
+    if not args:
+        await message.answer("ℹ️ O'chirish uchun emojini ko'rsating: <code>/del_emoji 🚀</code>")
+        return
+    res = delete_custom_emoji(args)
+    if res.get("success"):
+        await message.answer(f"✅ {res.get('message')}")
+    else:
+        await message.answer(f"❌ {res.get('error')}")
+
+
 @dp.message(F.text & ~F.text.startswith("/"))
 async def ai_chat_handler(message: Message, state: FSMContext):
     curr_state = await state.get_state()
     if curr_state:
         return
+
+    is_admin = await is_admin_or_owner(message.from_user.id)
+
+    # 0. Check if admin sent custom emoji(s) directly
+    custom_entities = []
+    if message.entities and is_admin:
+        custom_entities = [e for e in message.entities if e.type == MessageEntityType.CUSTOM_EMOJI and e.custom_emoji_id]
+
+    if custom_entities:
+        clean_txt = message.text or ""
+        for ce in custom_entities:
+            ch = ce.extract_from(message.text)
+            clean_txt = clean_txt.replace(ch, "").strip()
+
+        is_only_emojis = len(clean_txt) == 0
+        has_add_intent = any(w in (message.text or "").lower() for w in ("qo'sh", "saqla", "add", "yangi", "ishlat", "save"))
+
+        if is_only_emojis or has_add_intent:
+            registered_list = []
+            for ce in custom_entities:
+                ch = ce.extract_from(message.text)
+                cid = ce.custom_emoji_id
+                r = add_custom_emoji(ch, cid)
+                if r.get("success"):
+                    registered_list.append((ch, cid))
+            if registered_list:
+                items = "\n".join([f"• {ch} -> ID: <code>{cid}</code>" for ch, cid in registered_list])
+                await message.answer(
+                    f"✅ <b>Yangi Premium Custom Emoji saqlandi!</b>\n\n"
+                    f"{items}\n\n"
+                    f"✨ <i>Ushbu animatsiyali emojilar endi botning barcha xabarlari, hisobotlari va menyu tugmalarida avtomatik ishlatiladi.</i>"
+                )
+                return
 
     # 1. AI-powered intelligent login & credentials extraction (handles overrides, lists, replies, quotes)
     replied_text = ""
@@ -3639,10 +3804,16 @@ async def ai_chat_handler(message: Message, state: FSMContext):
     await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
 
     prompt = message.text
+    if custom_entities:
+        for ce in custom_entities:
+            add_custom_emoji(ce.extract_from(message.text), ce.custom_emoji_id)
+        emoji_notes = ", ".join([f"{ce.extract_from(message.text)} (ID: {ce.custom_emoji_id})" for ce in custom_entities])
+        prompt += f"\n\n[Diqqat: Administrator xabarida quyidagi Telegram Premium Custom Emojilar yuborildi: {emoji_notes}]"
+
     if message.reply_to_message:
         replied_text = message.reply_to_message.text or message.reply_to_message.caption or ""
         if replied_text:
-            prompt = f"[Foydalanuvchi quyidagi xabarga javob bermoqda:\n«««\n{replied_text[:2000]}\n»»»]\n\n{message.text}"
+            prompt = f"[Foydalanuvchi quyidagi xabarga javob bermoqda:\n«««\n{replied_text[:2000]}\n»»»]\n\n{prompt}"
 
     draft_id = random.randint(100000, 999999)
     think_ico = tg_icon("thinking", "💭")

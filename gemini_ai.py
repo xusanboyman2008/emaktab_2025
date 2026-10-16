@@ -4,6 +4,7 @@ import json
 import sqlite3
 import re
 from pathlib import Path
+from md_styler import add_custom_emoji, delete_custom_emoji, list_custom_emojis
 
 GEMINI_API_KEYS = [
     os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Ih3gXnAjLQbEFdU1mh_-fGMbC0qJ7FuCGOBAhmSGmr5g"),
@@ -659,6 +660,35 @@ ADMIN_FUNCTION_DECLARATIONS = [
                 "count": {"type": "INTEGER", "description": "Yangi yig'iladigan kapchalar soni (standart 10)"}
             }
         }
+    },
+    {
+        "name": "tool_add_custom_emoji",
+        "description": "Faqat administrator uchun: Yangi animatsiyali premium custom emoji qo'shish yoki mavjudini yangilash. Masalan: emoji_char='🚀', custom_emoji_id='5429398777419014515', label='Raketa'. Shundan so'ng bot ushbu emojini barcha xabarlar va menyu tugmalarida avtomatik ishlatadi.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "emoji_char": {"type": "STRING", "description": "Standart unicode emoji belgisi (masalan '🚀', '🔥', '✨')"},
+                "custom_emoji_id": {"type": "STRING", "description": "Telegram Custom Emoji ID raqami (faqat raqamlar)"},
+                "label": {"type": "STRING", "description": "Emoji nomi yoki izoh (masalan 'Raketa')"}
+            },
+            "required": ["emoji_char", "custom_emoji_id"]
+        }
+    },
+    {
+        "name": "tool_delete_custom_emoji",
+        "description": "Faqat administrator uchun: Ro'yxatdan biror custom emojini o'chirish.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "emoji_char": {"type": "STRING", "description": "O'chirilishi kerak bo'lgan emoji"}
+            },
+            "required": ["emoji_char"]
+        }
+    },
+    {
+        "name": "tool_list_custom_emojis",
+        "description": "Faqat administrator uchun: Barcha tizimda saqlangan animatsiyali custom emojilar va ularning ID raqamlari ro'yxatini ko'rish.",
+        "parameters": {"type": "OBJECT", "properties": {}}
     }
 ]
 
@@ -709,8 +739,9 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
         system_inst = (
             SYSTEM_INSTRUCTION + "\n"
             "DIQQAT: Ushbu foydalanuvchi tizim ADMINISTRATORI (Owner/Admin) hisoblanadi.\n"
-            "Siz uning topshirig'i bo'yicha barcha ma'lumotlar bazasini ko'rish va unga o'zgartirish kiritish vakolatiga egasiz.\n"
+            "Siz uning topshirig'i bo'yicha barcha ma'lumotlar bazasini ko'rish, o'zgartirish va animatsiyali premium custom emojilarni boshqarish vakolatiga egasiz.\n"
             "Mavjud boshqaruv qobiliyatlaringiz:\n"
+            "- Custom emojilarni qo'shish/sozlash: `tool_add_custom_emoji`, `tool_delete_custom_emoji`, `tool_list_custom_emojis`\n"
             "- Sinf to'lovini uzaytirish: `tool_extend_grade_access`\n"
             "- Sinf parollarini ommaviy almashtirish: `tool_bulk_update_passwords_in_grade`\n"
             "- Yangi o'quvchi qo'shish: `tool_add_student_login`\n"
@@ -756,94 +787,101 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
                         print(f"Gemini {model_name} quota/limit ({resp.status}) on key ...{api_key[-6:]}. Rotating key...")
                         mark_key_exhausted(api_key)
                         break  # Break model loop to jump directly to next active API key
-                        if resp.status != 200:
-                            err_txt = await resp.text()
-                            print(f"Gemini {model_name} API error ({resp.status}): {err_txt}")
-                            continue
+                    
+                    if resp.status != 200:
+                        err_txt = await resp.text()
+                        print(f"Gemini {model_name} API error ({resp.status}): {err_txt}")
+                        continue
 
-                        data = await resp.json()
-                        candidates = data.get("candidates", [])
-                        if not candidates:
-                            continue
-                        candidate = candidates[0]
-                        parts = candidate.get("content", {}).get("parts", [])
+                    data = await resp.json()
+                    candidates = data.get("candidates", [])
+                    if not candidates:
+                        continue
+                    candidate = candidates[0]
+                    parts = candidate.get("content", {}).get("parts", [])
 
-                        for part in parts:
-                            if "functionCall" in part:
-                                fc = part["functionCall"]
-                                fname = fc.get("name")
-                                fargs = fc.get("args", {})
-                                
-                                # Execute local tool with strict privacy & admin security check
-                                if not is_admin and fname != "tool_get_system_stats":
-                                    f_result = {
-                                        "success": False,
-                                        "error": "Ruxsat berilmagan! O'quvchilar shaxsiy ma'lumotlari, login/parollar va o'zgartirishlar faqat administrator uchun ochiq. Siz faqat umumiy statistikani ko'rishingiz mumkin."
-                                    }
-                                elif fname == "tool_get_system_stats":
-                                    f_result = tool_get_system_stats()
-                                elif fname == "tool_get_grade_logins":
-                                    f_result = tool_get_grade_logins(**fargs)
-                                elif fname == "tool_get_failed_logins":
-                                    f_result = tool_get_failed_logins(**fargs)
-                                elif fname == "tool_find_student_login":
-                                    f_result = tool_find_student_login(**fargs)
-                                elif fname == "tool_update_student_password":
-                                    f_result = tool_update_student_password(**fargs)
-                                elif fname == "tool_set_login_payment_status":
-                                    f_result = tool_set_login_payment_status(**fargs)
-                                elif fname == "tool_set_grade_status":
-                                    f_result = tool_set_grade_status(**fargs)
-                                elif fname == "tool_delete_student_login":
-                                    f_result = tool_delete_student_login(**fargs)
-                                elif fname == "tool_set_bot_setting":
-                                    f_result = tool_set_bot_setting(**fargs)
-                                elif fname == "tool_extend_grade_access":
-                                    f_result = tool_extend_grade_access(**fargs)
-                                elif fname == "tool_bulk_update_passwords_in_grade":
-                                    f_result = tool_bulk_update_passwords_in_grade(**fargs)
-                                elif fname == "tool_add_student_login":
-                                    f_result = tool_add_student_login(**fargs)
-                                elif fname == "tool_clean_grade_logins":
-                                    f_result = tool_clean_grade_logins(**fargs)
-                                elif fname == "tool_reset_grade_login_status":
-                                    f_result = tool_reset_grade_login_status(**fargs)
-                                elif fname == "tool_get_school_detailed_report":
-                                    f_result = tool_get_school_detailed_report(**fargs)
-                                elif fname == "tool_manage_captchas":
-                                    f_result = await tool_manage_captchas(**fargs)
-                                else:
-                                    f_result = {}
-
-                                contents.append(candidate["content"])
-                                fr_part = {
-                                    "functionResponse": {
-                                        "name": fname,
-                                        "response": {"result": f_result}
-                                    }
+                    for part in parts:
+                        if "functionCall" in part:
+                            fc = part["functionCall"]
+                            fname = fc.get("name")
+                            fargs = fc.get("args", {})
+                            
+                            # Execute local tool with strict privacy & admin security check
+                            if not is_admin and fname != "tool_get_system_stats":
+                                f_result = {
+                                    "success": False,
+                                    "error": "Ruxsat berilmagan! O'quvchilar shaxsiy ma'lumotlari, login/parollar va o'zgartirishlar faqat administrator uchun ochiq. Siz faqat umumiy statistikani ko'rishingiz mumkin."
                                 }
-                                if "id" in fc:
-                                    fr_part["functionResponse"]["id"] = fc["id"]
+                            elif fname == "tool_get_system_stats":
+                                f_result = tool_get_system_stats()
+                            elif fname == "tool_add_custom_emoji":
+                                f_result = add_custom_emoji(**fargs)
+                            elif fname == "tool_delete_custom_emoji":
+                                f_result = delete_custom_emoji(**fargs)
+                            elif fname == "tool_list_custom_emojis":
+                                f_result = list_custom_emojis()
+                            elif fname == "tool_get_grade_logins":
+                                f_result = tool_get_grade_logins(**fargs)
+                            elif fname == "tool_get_failed_logins":
+                                f_result = tool_get_failed_logins(**fargs)
+                            elif fname == "tool_find_student_login":
+                                f_result = tool_find_student_login(**fargs)
+                            elif fname == "tool_update_student_password":
+                                f_result = tool_update_student_password(**fargs)
+                            elif fname == "tool_set_login_payment_status":
+                                f_result = tool_set_login_payment_status(**fargs)
+                            elif fname == "tool_set_grade_status":
+                                f_result = tool_set_grade_status(**fargs)
+                            elif fname == "tool_delete_student_login":
+                                f_result = tool_delete_student_login(**fargs)
+                            elif fname == "tool_set_bot_setting":
+                                f_result = tool_set_bot_setting(**fargs)
+                            elif fname == "tool_extend_grade_access":
+                                f_result = tool_extend_grade_access(**fargs)
+                            elif fname == "tool_bulk_update_passwords_in_grade":
+                                f_result = tool_bulk_update_passwords_in_grade(**fargs)
+                            elif fname == "tool_add_student_login":
+                                f_result = tool_add_student_login(**fargs)
+                            elif fname == "tool_clean_grade_logins":
+                                f_result = tool_clean_grade_logins(**fargs)
+                            elif fname == "tool_reset_grade_login_status":
+                                f_result = tool_reset_grade_login_status(**fargs)
+                            elif fname == "tool_get_school_detailed_report":
+                                f_result = tool_get_school_detailed_report(**fargs)
+                            elif fname == "tool_manage_captchas":
+                                f_result = await tool_manage_captchas(**fargs)
+                            else:
+                                f_result = {}
 
-                                contents.append({
-                                    "role": "user",
-                                    "parts": [fr_part]
-                                })
+                            contents.append(candidate["content"])
+                            fr_part = {
+                                "functionResponse": {
+                                    "name": fname,
+                                    "response": {"result": f_result}
+                                }
+                            }
+                            if "id" in fc:
+                                fr_part["functionResponse"]["id"] = fc["id"]
 
-                                payload["contents"] = contents
-                                async with session.post(url, json=payload) as resp2:
-                                    if resp2.status == 200:
-                                        data2 = await resp2.json()
-                                        res_parts = data2.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-                                        if res_parts:
-                                            return res_parts[0].get("text", "").strip()
-                                    else:
-                                        err_txt2 = await resp2.text()
-                                        print(f"Gemini {model_name} resp2 error ({resp2.status}): {err_txt2}")
-                                    return "Ma'lumotlar tahlil qilindi, biroq javob shakllantirishda xatolik yuz berdi."
+                            contents.append({
+                                "role": "user",
+                                "parts": [fr_part]
+                            })
 
-                            if "text" in part:
-                                return part["text"].strip()
+                            payload["contents"] = contents
+                            async with session.post(url, json=payload) as resp2:
+                                if resp2.status == 200:
+                                    data2 = await resp2.json()
+                                    res_parts = data2.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                                    if res_parts:
+                                        return res_parts[0].get("text", "").strip()
+                                else:
+                                    err_txt2 = await resp2.text()
+                                    print(f"Gemini {model_name} resp2 error ({resp2.status}): {err_txt2}")
+                                return "Ma'lumotlar tahlil qilindi, biroq javob shakllantirishda xatolik yuz berdi."
+
+                        if "text" in part:
+                            return part["text"].strip()
 
             except Exception as e:
                 print(f"Gemini request exception for {model_name}: {e}")

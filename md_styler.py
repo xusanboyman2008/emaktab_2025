@@ -1,5 +1,10 @@
+import json
+import os
+from pathlib import Path
 import markdown2
 import re
+
+CUSTOM_EMOJIS_FILE = Path(__file__).parent / "custom_emojis.json"
 
 EMOJI_MAP = {
     # Status / Alerts
@@ -10,11 +15,16 @@ EMOJI_MAP = {
     "🟢": "5415722549281561774",  # IslomjonAnime green
     "🟡": "5415803109983133508",  # IslomjonAnime yellow
     "🔴": "5416044289576673808",  # IslomjonAnime red
+    "⚪": "5415722549281561774",  # IslomjonAnime white/circle
+    "⏹": "5273914604752216432",  # Stop/cross
     # Roles
     "👑": "5431684550424011313",  # IslomjonAnime crown
     "⭐": "5361561289397121939",  # IslomjonAnime star
     "👤": "5373012449597335010",  # User
     "👥": "5372926953978341366",  # Users
+    "👩": "5373012449597335010",  # Woman / Teacher / User
+    "👨": "5373012449597335010",  # Man / User
+    "👦": "5373012449597335010",  # Boy / Student
     "🎓": "5375163339154399459",  # Grad
     "👨‍💻": "5429398777419014515",  # Dev
     # School / Education
@@ -28,9 +38,12 @@ EMOJI_MAP = {
     "🛠": "5213214428958306222",  # Tools
     "⏰": "5215394081911351762",  # Decoration clock
     "⏳": "5215327832040811010",  # Decoration hourglass
+    "⏱": "5215394081911351762",  # Stopwatch / Clock
     "🔄": "5264727218734524899",  # Refresh
     "🔑": "5330115548900501467",  # Key
     "🔐": "5350619413533958825",  # Lock
+    "🔒": "5350619413533958825",  # Lock closed
+    "🔓": "5330115548900501467",  # Unlock
     "✏️": "5334673106202010226",  # Edit
     "✏": "5334673106202010226",
     "🔍": "5188217332748527444",  # Search
@@ -44,11 +57,15 @@ EMOJI_MAP = {
     "📝": "5215672443036772796",  # Memo
     "📁": "5215672443036772796",  # Folder/Memo
     "📄": "5215672443036772796",  # Document/Memo
+    "📑": "5215672443036772796",  # Document tabs/Memo
     "📷": "5215685959298853284",  # Camera
     "📸": "5215685959298853284",  # Photo/Camera
     "🔔": "5215372534060428125",  # Bell
+    "📢": "5215372534060428125",  # Loudspeaker/Bell
     "🔗": "5215391376081954505",  # Link
     "💳": "5213403875670765022",  # Card/Money
+    "💰": "5213403875670765022",  # Money bag
+    "💵": "5213403875670765022",  # Dollar banknote
     # Celebrations & Highlights
     "🎉": "5215628200578655810",  # Party
     "💎": "5215377245639549895",  # Diamond
@@ -56,11 +73,18 @@ EMOJI_MAP = {
     "⚡️": "5215356457997837659",  # Flash
     "⚡": "5215356457997837659",
     "💡": "5215356457997837659",  # Tip
+    "🔥": "5215356457997837659",  # Fire / Flash
+    "🌅": "5215356457997837659",  # Sunrise / Flash
     "🤖": "5312078301165012884",  # Robot
+    "🚀": "5429398777419014515",  # Rocket / Dev
     "💭": "5456125285160226779",  # Thinking
     "🤔": "5456125285160226779",  # Thinking
+    "💬": "5456125285160226779",  # Speech bubble
     "👋": "5472055112702629499",  # Wave
     "📆": "5431897022456145283",  # Calendar
+    "📅": "5431897022456145283",  # Calendar date
+    "❤️": "5361561289397121939",  # Heart / Star
+    "❤": "5361561289397121939",
     # Additional Tools, Media & Symbols
     "✨": "5472164874886846699",  # Sparkles
     "🎯": "5350460637182993292",  # Target
@@ -85,7 +109,97 @@ EMOJI_MAP = {
     "➡": "5406745015365943482",
 }
 
-_EMOJI_REGEX = re.compile('|'.join(re.escape(k) for k in sorted(EMOJI_MAP.keys(), key=len, reverse=True)))
+def load_custom_emojis() -> dict[str, str]:
+    """Loads dynamically saved custom emojis from custom_emojis.json."""
+    if CUSTOM_EMOJIS_FILE.exists():
+        try:
+            with open(CUSTOM_EMOJIS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return {str(k): str(v) for k, v in data.items()}
+        except Exception as e:
+            print(f"Error loading {CUSTOM_EMOJIS_FILE}: {e}")
+    return {}
+
+def save_custom_emojis(data: dict[str, str]):
+    """Saves custom emojis dictionary to custom_emojis.json."""
+    try:
+        with open(CUSTOM_EMOJIS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error saving {CUSTOM_EMOJIS_FILE}: {e}")
+
+_EMOJI_REGEX = None
+
+def _recompile_regex():
+    global _EMOJI_REGEX
+    _EMOJI_REGEX = re.compile('|'.join(re.escape(k) for k in sorted(EMOJI_MAP.keys(), key=len, reverse=True)))
+
+# Load saved custom emojis and compile regex on module init
+try:
+    _saved = load_custom_emojis()
+    if _saved:
+        EMOJI_MAP.update(_saved)
+except Exception:
+    pass
+
+_recompile_regex()
+
+def add_custom_emoji(emoji_char: str, custom_emoji_id: str, label: str = "") -> dict:
+    """
+    Registers a new custom emoji or updates an existing one.
+    Updates in-memory EMOJI_MAP, recompiles regex, and persists to custom_emojis.json.
+    """
+    char = str(emoji_char).strip()
+    c_id = str(custom_emoji_id).strip()
+    if not char:
+        return {"success": False, "error": "Emoji belgisi bo'sh bo'lishi mumkin emas."}
+    if not c_id.isdigit():
+        return {"success": False, "error": f"Custom emoji ID faqat raqamlardan iborat bo'lishi kerak. Berilgan: {c_id}"}
+    
+    EMOJI_MAP[char] = c_id
+    saved = load_custom_emojis()
+    saved[char] = c_id
+    save_custom_emojis(saved)
+    _recompile_regex()
+    
+    desc = f" ({label})" if label else ""
+    return {
+        "success": True,
+        "emoji": char,
+        "custom_emoji_id": c_id,
+        "message": f"Yangi custom emoji saqlandi{desc}: {char} -> ID: {c_id}."
+    }
+
+def delete_custom_emoji(emoji_char: str) -> dict:
+    """Removes a custom emoji from mapping and persistence."""
+    char = str(emoji_char).strip()
+    saved = load_custom_emojis()
+    deleted = False
+    if char in saved:
+        del saved[char]
+        save_custom_emojis(saved)
+        deleted = True
+    if char in EMOJI_MAP:
+        del EMOJI_MAP[char]
+        _recompile_regex()
+        deleted = True
+    if deleted:
+        return {"success": True, "message": f"'{char}' emojisi muvaffaqiyatli o'chirildi."}
+    return {"success": False, "error": f"'{char}' emojisi topilmadi."}
+
+def list_custom_emojis() -> dict:
+    """Returns summary of all available custom emojis."""
+    saved = load_custom_emojis()
+    return {
+        "jami_emojilar_soni": len(EMOJI_MAP),
+        "admin_qoshgan_emojilar_soni": len(saved),
+        "admin_emojilari": saved,
+        "barcha_emojilar": {k: EMOJI_MAP[k] for k in sorted(EMOJI_MAP.keys())}
+    }
+
+def get_custom_emoji_id(emoji_char: str) -> str | None:
+    return EMOJI_MAP.get(emoji_char)
 
 
 def apply_premium_emojis(html: str) -> str:
