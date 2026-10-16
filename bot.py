@@ -3296,6 +3296,38 @@ parol: 12345
     return entries
 
 
+def extract_password_from_override_text(text: str) -> str | None:
+    """Extracts candidate password from commands like 'instead use password as 12345678a for all' or 'the password was 12345678v'."""
+    text_clean = text.strip()
+    m = re.search(r'(?:instead\s+)?use\s+password\s+(?:as\s+)?([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r'(?:the\s+)?password\s+(?:was|is|as)?\s*[:=]?\s*([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r'parol(?:i|ini|ni)?\s+(?:as\s+|qilib\s+)?([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r'([A-Za-z0-9!@#$%^&*_\-\+]{6,})\s+(?:parol|deb|qilib|bilan)', text_clean, re.I)
+    if m:
+        return m.group(1).strip()
+    return None
+
+
+def extract_usernames_from_text(text: str) -> list[str]:
+    """Extracts eMaktab usernames from a summary, bulleted list or error message."""
+    matches = re.findall(r'[•\*\-]?\s*[❌✅]?\s*([a-zA-Z][a-zA-Z0-9._\-]{3,35})\s*(?:\(|$|\s)', text)
+    seen = set()
+    res = []
+    stopwords = {'fayl', 'photo', 'jami', 'xato', 'natija', 'login', 'parol', 'password', 'maktab', 'sinf', 'document'}
+    for m in matches:
+        m_clean = m.strip()
+        if m_clean.lower() not in seen and m_clean.lower() not in stopwords:
+            seen.add(m_clean.lower())
+            res.append(m_clean)
+    return res
+
+
 async def handle_logins_batch_execution(message: Message, credentials: list[tuple[str, str]]):
     """Processes, verifies on eMaktab, detects grade/school and reports status for one or multiple logins."""
     is_multi = len(credentials) > 1
@@ -3401,13 +3433,28 @@ async def ai_chat_handler(message: Message, state: FSMContext):
     if curr_state:
         return
 
-    # Check if user sent login and password directly in message!
+    # 1. Check if user replied to a message specifying a new password for logins in that message
+    if message.reply_to_message:
+        replied_text = message.reply_to_message.text or message.reply_to_message.caption or ""
+        new_pwd = extract_password_from_override_text(message.text)
+        if new_pwd and replied_text:
+            extracted_users = extract_usernames_from_text(replied_text)
+            if extracted_users:
+                creds = [(u, new_pwd) for u in extracted_users]
+                await message.answer(
+                    f"🔄 <b>{len(extracted_users)} ta</b> login uchun yangi parol (<code>{new_pwd}</code>) qabul qilindi.\n"
+                    f"eMaktab orqali tekshirilib, bazaga kiritilmoqda..."
+                )
+                await handle_logins_batch_execution(message, creds)
+                return
+
+    # 2. Check if user sent login and password directly in message!
     creds = parse_credentials_from_text(message.text)
     if creds:
         await handle_logins_batch_execution(message, creds)
         return
 
-    # Otherwise, handle via Gemini AI with Mira Thinking indicator & Live Timer
+    # 3. Otherwise, handle via Gemini AI with Mira Thinking indicator & Live Timer
     user_name = message.from_user.full_name or message.from_user.first_name or ""
     await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
 
@@ -3429,9 +3476,15 @@ async def ai_chat_handler(message: Message, state: FSMContext):
     except Exception:
         pass
 
+    prompt = message.text
+    if message.reply_to_message:
+        replied_text = message.reply_to_message.text or message.reply_to_message.caption or ""
+        if replied_text:
+            prompt = f"[Foydalanuvchi quyidagi xabarga javob bermoqda:\n«««\n{replied_text[:2000]}\n»»»]\n\n{message.text}"
+
     start_time = asyncio.get_event_loop().time()
     is_admin = await is_admin_or_owner(message.from_user.id)
-    ai_task = asyncio.create_task(ask_gemini(message.text, user_name=user_name, is_admin=is_admin))
+    ai_task = asyncio.create_task(ask_gemini(prompt, user_name=user_name, is_admin=is_admin))
     active_ai_tasks[draft_id] = ai_task
 
     try:
