@@ -3716,7 +3716,7 @@ async def ai_chat_handler(message: Message, state: FSMContext):
     draft_id = random.randint(100000, 999999)
     think_ico = tg_icon("thinking", "💭")
     is_admin = await is_admin_or_owner(message.from_user.id)
-    ai_task = asyncio.create_task(ask_gemini(prompt, user_name=user_name, is_admin=is_admin))
+    ai_task = asyncio.create_task(ask_gemini(prompt, user_name=user_name, is_admin=is_admin, user_id=message.from_user.id))
     active_ai_tasks[draft_id] = ai_task
 
     thinking_msg = None
@@ -3896,7 +3896,7 @@ async def voice_audio_message_handler(message: Message, state: FSMContext):
 
         # If voice contains conversational or command transcript, route to ask_gemini with admin status
         if transcript:
-            reply = await ask_gemini(transcript, user_name=user_name, is_admin=is_admin)
+            reply = await ask_gemini(transcript, user_name=user_name, is_admin=is_admin, user_id=message.from_user.id)
         else:
             reply = result.get("reply", "Ovozli xabaringiz tushunildi.")
 

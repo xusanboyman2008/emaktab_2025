@@ -214,16 +214,11 @@ async def create_user(tg_id, grade=None, first_name=None, username=None, school_
 
         if int(tg_id) == 6588631008:
             role = "owner"
-        elif int(tg_id) == 5432194711:
-            role = "admin"
 
         if existing_user:
             updated = False
             if int(tg_id) == 6588631008 and existing_user.role != "owner":
                 existing_user.role = "owner"
-                updated = True
-            elif int(tg_id) == 5432194711 and existing_user.role != "admin":
-                existing_user.role = "admin"
                 updated = True
             elif role and existing_user.role != role:
                 existing_user.role = role
@@ -615,7 +610,7 @@ async def set_setting(key: str, value: str) -> None:
         await session.commit()
 
 
-_ADMIN_CACHE: set[int] = {6588631008, 5432194711}
+_ADMIN_CACHE: set[int] = {6588631008}
 
 
 async def load_admin_cache() -> set[int]:
@@ -624,7 +619,6 @@ async def load_admin_cache() -> set[int]:
         res = await session.execute(select(User.tg_id).where(User.role.in_(["owner", "admin"])))
         admins = {int(x) for x in res.scalars().all() if x}
         admins.add(6588631008)
-        admins.add(5432194711)
         _ADMIN_CACHE = admins
         return _ADMIN_CACHE
 

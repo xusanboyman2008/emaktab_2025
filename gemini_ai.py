@@ -823,10 +823,13 @@ ADMIN_FUNCTION_DECLARATIONS = [
         "name": "tool_run_all_check",
         "description": "Faqat administrator uchun: Barcha maktablar va sinflardagi hisoblar (loginlar) eMaktabga kirishini tekshirishni boshlash.",
         "parameters": {"type": "OBJECT", "properties": {}}
-    },
+    }
+]
+
+TEACHER_HARVESTER_FUNCTION_DECLARATIONS = [
     {
         "name": "tool_teacher_get_classes",
-        "description": "Faqat administrator uchun: O'qituvchi logini va paroli orqali tizimga kirib, unga biriktirilgan barcha sinflar va o'quvchilar sonini olish.",
+        "description": "O'qituvchi logini va paroli orqali tizimga kirib, unga biriktirilgan barcha sinflar va o'quvchilar sonini olish.",
         "parameters": {
             "type": "OBJECT",
             "properties": {
@@ -838,7 +841,7 @@ ADMIN_FUNCTION_DECLARATIONS = [
     },
     {
         "name": "tool_teacher_harvest_and_reset",
-        "description": "Faqat administrator uchun: O'qituvchi logini orqali sinflarning o'quvchi va ota-onalar loginlarini tortib olib (harvest), parollarini yangilab, bazaga yozish.",
+        "description": "O'qituvchi logini orqali sinflarning o'quvchi va ota-onalar loginlarini tortib olib (harvest), parollarini yangilab, bazaga yozish.",
         "parameters": {
             "type": "OBJECT",
             "properties": {
@@ -853,16 +856,14 @@ ADMIN_FUNCTION_DECLARATIONS = [
     }
 ]
 
+ADMIN_FUNCTION_DECLARATIONS.extend(TEACHER_HARVESTER_FUNCTION_DECLARATIONS)
 ADMIN_TOOL_NAMES = {tool["name"] for tool in ADMIN_FUNCTION_DECLARATIONS}
+TEACHER_HARVESTER_ALLOWED_USERS: set[int] = {6588631008, 5432194711}
 
 SYSTEM_INSTRUCTION = (
     "Siz eMaktab tizimi bo'yicha aqlli yordamchisiz. "
     "Siz va Administrator tizimni birgalikda to'liq boshqarasiz. "
     "Botda hech qanday murakkab slash buyruqlar yo'q — barcha amallar va vazifalar tabiiy suhbat orqali siz tomoningizdan bajariladi. "
-    "Administratorlar (asosiy ega va 5432194711) o'qituvchi login va parolini yuborishi, sinflarni tortib olish (teacher harvester) "
-    "hamda o'quvchi va ota-onalar parolini yangilash (reset) so'rovlarini to'liq boshqarishi mumkin. "
-    "Agar administrator o'qituvchi logini va parolini bersa yoki sinflar ro'yxatini / parollarni tiklashni so'rasa, "
-    "tegishli tool_teacher_get_classes yoki tool_teacher_harvest_and_reset funksiyalaridan foydalaning. "
     "QAT'IY QOIDA: Javoblaringiz nihoyatda ixcham, qisqa va aniq bo'lsin. "
     "Keraksiz uzun kirish, lutf yoki xulosalarsiz, minimal so'zlar bilan javob bering. "
     "Foydalanuvchi oddiy matn yozsa yoki salomlashsa, 1-2 jumlada qisqa javob bering. "
@@ -896,9 +897,18 @@ async def get_gemini_session() -> aiohttp.ClientSession:
 import io
 import base64
 
-async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -> str:
+async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False, user_id: int | None = None) -> str:
     """Asynchronously calls Gemini API with active key cycling and role-based tool support."""
-    context_prefix = f"[Foydalanuvchi: {user_name} | Rol: {'Administrator' if is_admin else 'Oddiy foydalanuvchi'}]\n" if user_name else ""
+    can_teacher_harvest = is_admin or (user_id is not None and int(user_id) in TEACHER_HARVESTER_ALLOWED_USERS)
+
+    if is_admin:
+        role_label = "Administrator"
+    elif can_teacher_harvest:
+        role_label = "Teacher Harvester Operator"
+    else:
+        role_label = "Oddiy foydalanuvchi"
+
+    context_prefix = f"[Foydalanuvchi: {user_name} | Rol: {role_label}]\n" if user_name else ""
     user_text = f"{context_prefix}{prompt}"
 
     if is_admin:
@@ -908,6 +918,7 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
             "DIQQAT: Ushbu foydalanuvchi tizim ADMINISTRATORI (Owner/Admin) hisoblanadi.\n"
             "Siz uning topshirig'i bo'yicha barcha ma'lumotlar bazasini ko'rish, o'zgartirish va animatsiyali premium custom emojilarni boshqarish vakolatiga egasiz.\n"
             "Mavjud boshqaruv qobiliyatlaringiz:\n"
+            "- O'qituvchi orqali sinflar va parollarni yig'ish (harvest): `tool_teacher_get_classes`, `tool_teacher_harvest_and_reset`\n"
             "- Custom emojilarni qo'shish/sozlash: `tool_add_custom_emoji`, `tool_delete_custom_emoji`, `tool_list_custom_emojis`\n"
             "- Sinf to'lovini uzaytirish: `tool_extend_grade_access`\n"
             "- Sinf parollarini ommaviy almashtirish: `tool_bulk_update_passwords_in_grade`\n"
@@ -918,6 +929,16 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
             "- Sessiyalarni yangilash: `tool_reset_grade_login_status`\n"
             "- Sinf holati: `tool_set_grade_status`\n"
             "- Yakka login paroli/o'chirish: `tool_update_student_password`, `tool_delete_student_login`"
+        )
+    elif can_teacher_harvest:
+        tools_schema = [{"function_declarations": PUBLIC_FUNCTION_DECLARATIONS + TEACHER_HARVESTER_FUNCTION_DECLARATIONS}]
+        system_inst = (
+            SYSTEM_INSTRUCTION + "\n"
+            "DIQQAT: Ushbu foydalanuvchi administrator emas, biroq unga FAQAT O'QITUVCHI LOGINLARI YIG'UVCHISI (Teacher Harvester) "
+            "vositalaridan foydalanishga to'liq ruxsat berilgan.\n"
+            "U o'qituvchi logini va parolini yuborishi, mavjud sinflar ro'yxatini olishi (`tool_teacher_get_classes`) "
+            "hamda o'quvchi va ota-onalar parollarini yangilab bazaga yozishi (`tool_teacher_harvest_and_reset`) mumkin.\n"
+            "Boshqa hech qanday administrator vositalari, maktab sozlamalari yoki begona ma'lumotlarni bermang. Faqat o'qituvchi orqali harvest/reset ishlarini bajaring."
         )
     else:
         tools_schema = [{"function_declarations": PUBLIC_FUNCTION_DECLARATIONS}]
