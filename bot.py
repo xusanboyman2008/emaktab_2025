@@ -389,7 +389,7 @@ def main_inline_keyboard(is_admin: bool, school_id: int = 1, schools: list = Non
             make_btn("Telegraph Hisoboti", callback_data="make_telegraph_report", emoji="memo")
         ])
         rows.append([
-            make_btn("Qayta tekshirish (/all)", callback_data="admin_run_all", emoji="refresh")
+            make_btn("Qayta tekshirish", callback_data="admin_run_all", emoji="refresh")
         ])
         rows.append([
             make_btn("Sinflar Nazorati (Ruxsat/To'lov)", callback_data="admin_grades_ctrl_1", emoji="tools"),
@@ -534,27 +534,6 @@ async def help_callback(callback: CallbackQuery):
 # -------------------------------------------------------------------------
 # Schools Listing & Inspection
 # -------------------------------------------------------------------------
-@dp.message(Command("schools"))
-async def list_schools_command(message: Message):
-    schools = await get_all_schools()
-    admin = is_owner(message.from_user.id)
-    if not schools:
-        text = "ℹ️ Hozircha bazada hech qanday maktab mavjud emas."
-        kb = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="➕ Maktab qo'shish", callback_data="admin_add_school")
-        ]]) if admin else None
-        await message.answer(text, reply_markup=kb)
-        return
-
-    text = "🏫 <b>Barcha maktablar ro'yxati:</b>\n<i>Statistikani ko'rish uchun maktabni tanlang:</i>"
-    buttons = []
-    for s in schools:
-        buttons.append([make_btn(f"{s.school_number}-maktab ({s.place})", callback_data=f"view_sch_{s.id}", emoji="school")])
-
-    buttons.append([make_btn("Asosiy Menyu", callback_data="main_menu", emoji="back")])
-    await message.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
-
-
 @dp.callback_query(F.data == "list_schools")
 async def list_schools_callback(callback: CallbackQuery):
     schools = await get_all_schools()
@@ -1709,7 +1688,6 @@ async def generate_telegraph_report_pages(is_admin: bool) -> list[dict]:
 
 
 @dp.callback_query(F.data == "make_telegraph_report")
-@dp.message(Command("telegraph"))
 async def telegraph_report_handler(event: Message | CallbackQuery):
     user_id = event.from_user.id
     admin = await is_admin_or_owner(user_id)
@@ -1746,12 +1724,6 @@ async def main_stats_callback(callback: CallbackQuery):
         await callback.message.edit_text(report_text, reply_markup=markup)
     except TelegramBadRequest:
         pass
-
-
-@dp.message(Command("stats"))
-async def stats_command_handler(message: Message):
-    report_text, markup = await generate_overall_report_content()
-    await message.answer(report_text, reply_markup=markup)
 
 
 # -------------------------------------------------------------------------
@@ -1842,19 +1814,16 @@ async def send_json():
 
 
 
-@dp.message(Command("all"))
-async def all_logins_command(message: Message):
-    if not await is_admin_or_owner(message.from_user.id):
-        await message.answer("🚫 Ushbu buyruq faqat administrator uchun.")
+@dp.callback_query(F.data == "admin_run_all")
+async def admin_run_all_callback(callback: CallbackQuery):
+    if not await is_admin_or_owner(callback.from_user.id):
+        await callback.answer("🚫 Ruxsat berilmagan!", show_alert=True)
         return
-    msg = await message.answer("⏳ Barcha maktablar loginlarini tekshirish boshlandi...")
-    await login_schedule(message.from_user.id)
-    report_text, markup = await generate_overall_report_content()
-    await msg.edit_text(f"✅ <b>Tekshiruv yakunlandi!</b>\n\n{report_text}", reply_markup=markup)
+    await callback.answer("⏳ Barcha maktablar loginlarini tekshirish boshlandi...", show_alert=False)
+    asyncio.create_task(login_schedule(callback.from_user.id))
 
 
 @dp.callback_query(F.data == "admin_db_backup")
-@dp.message(Command("backup"))
 async def db_backup_handler(event: Message | CallbackQuery):
     user_id = event.from_user.id
     if not is_owner(user_id):
@@ -1878,11 +1847,9 @@ async def db_backup_handler(event: Message | CallbackQuery):
 # Admin & Bot Configuration Panel
 # -------------------------------------------------------------------------
 @dp.callback_query(F.data == "admin_settings_menu")
-@dp.message(Command("settings"))
-@dp.message(Command("admin"))
-@dp.message(Command("panel"))
-async def admin_settings_menu_handler(event: Message | CallbackQuery, state: FSMContext):
-    await state.clear()
+async def admin_settings_menu_handler(event: Message | CallbackQuery, state: FSMContext = None):
+    if state:
+        await state.clear()
     user_id = event.from_user.id
     if not await is_admin_or_owner(user_id):
         if isinstance(event, CallbackQuery):
@@ -2331,11 +2298,9 @@ async def admin_sys_info_callback(callback: CallbackQuery):
 
 # -------------------------------------------------------------------------
 # -------------------------------------------------------------------------
-# Teacher Login & Password Reset Automation Pipeline (/boost & /teacher)
+# Teacher Login & Password Reset Automation Pipeline
 # -------------------------------------------------------------------------
 @dp.callback_query(F.data == "teacher_reset_start")
-@dp.message(Command("teacher"))
-@dp.message(Command("boost"))
 async def teacher_reset_start_handler(event: CallbackQuery | Message, state: FSMContext):
     user_id = event.from_user.id
     if not await is_admin_or_owner(user_id):
@@ -2345,23 +2310,11 @@ async def teacher_reset_start_handler(event: CallbackQuery | Message, state: FSM
             await event.answer("🚫 Bu funksiya faqat adminlar uchun!")
         return
 
-    # Check if credentials passed directly with command (e.g. /boost login pass or /boost login:pass)
-    if isinstance(event, Message) and event.text:
-        raw_cmd = event.text.strip()
-        cmd_parts = raw_cmd.split(maxsplit=1)
-        if len(cmd_parts) > 1:
-            cmd_args = cmd_parts[1].strip()
-            u, p = await extract_teacher_credentials(cmd_args) or (None, None)
-            if u and p:
-                status_msg = await event.answer(f"{tg_icon('refresh', '⏳')} <i>Login va parol tahlil qilinmoqda...</i>")
-                await process_teacher_login_flow(status_msg, state, u, p)
-                return
-
     await state.set_state(TeacherResetStates.waiting_for_creds)
     text = (
-        f"{tg_icon('key', '🔑')} <b>O'qituvchi orqali parollarni yangilash (/boost)</b>\n\n"
+        f"{tg_icon('key', '🔑')} <b>O'qituvchi orqali parollarni yangilash</b>\n\n"
         "O'qituvchining eMaktab login va parolini yuboring:\n"
-        "• <b>Matn ko'rinishida</b> (masalan: <code>login: user parol: pass</code> yoki <code>/boost login parol</code>)\n"
+        "• <b>Matn ko'rinishida</b> (masalan: <code>login: user parol: pass</code>)\n"
         "• <b>Rasm / Skrinshot</b> (login va parol ko'ringan foto)\n"
         "• <b>Fayl yoki Hujjat</b> (.txt, .docx, .pdf)\n\n"
         f"{tg_icon('bot', '🤖')} <i>AI login ma'lumotlarini avtomatik ajratib oladi va tekshiradi.</i>"
@@ -3189,7 +3142,6 @@ async def execute_teacher_reset_process(message: Message, state: FSMContext, new
 # School Creation
 # -------------------------------------------------------------------------
 @dp.callback_query(F.data == "admin_add_school")
-@dp.message(Command("school"))
 async def start_add_school(event: Message | CallbackQuery, state: FSMContext):
     user_id = event.from_user.id
     if not await is_admin_or_owner(user_id):
@@ -3245,7 +3197,6 @@ async def process_school_days(message: Message, state: FSMContext):
 # Single Login Addition Flow (Auto School & Grade Detection)
 # -------------------------------------------------------------------------
 @dp.callback_query(F.data == "admin_add_login_start")
-@dp.message(Command("login"))
 async def start_add_login(event: Message | CallbackQuery, state: FSMContext):
     await create_user(tg_id=event.from_user.id)
     text = (
@@ -3639,103 +3590,50 @@ async def stopped_message_generation_handler(event: MessageGenerationStopped):
 
 
 # -------------------------------------------------------------------------
-# Dynamic Premium Custom Emoji Commands & Handlers
+# AI & Natural Language Administrative Engine (No Slash Commands Needed)
 # -------------------------------------------------------------------------
-@dp.message(Command("add_emoji"))
-async def add_emoji_command_handler(message: Message, command: CommandObject):
-    if not await is_admin_or_owner(message.from_user.id):
-        return
-
-    # 1. Custom emoji entity directly sent with command
-    if message.entities:
-        custom_entities = [e for e in message.entities if e.type == MessageEntityType.CUSTOM_EMOJI and e.custom_emoji_id]
-        if custom_entities:
-            added = []
-            for ce in custom_entities:
-                ch = ce.extract_from(message.text)
-                cid = ce.custom_emoji_id
-                r = add_custom_emoji(ch, cid)
-                if r.get("success"):
-                    added.append((ch, cid))
-            if added:
-                items = "\n".join([f"• {ch} -> ID: <code>{cid}</code>" for ch, cid in added])
-                await message.answer(
-                    f"✅ <b>Yangi Premium Custom Emoji saqlandi!</b>\n\n{items}\n\n"
-                    f"✨ <i>Ushbu animatsiyali emojilar barcha xabarlar va tugmalarda avtomatik ishlatiladi.</i>"
-                )
-                return
-
-    # 2. Text arguments: /add_emoji 🚀 5429398777419014515 [label]
-    args = (command.args or "").strip().split()
-    if len(args) >= 2:
-        emoji_char = args[0]
-        emoji_id = args[1]
-        label = args[2] if len(args) > 2 else ""
-        res = add_custom_emoji(emoji_char, emoji_id, label)
-        if res.get("success"):
-            await message.answer(
-                f"✅ <b>Yangi Premium Custom Emoji saqlandi!</b>\n"
-                f"• {emoji_char} -> ID: <code>{emoji_id}</code>\n\n"
-                f"✨ <i>Barcha xabarlar va menyu tugmalarida avtomatik ishlatiladi.</i>"
-            )
-        else:
-            await message.answer(f"❌ Xatolik: {res.get('error')}")
-        return
-
-    await message.answer(
-        "ℹ️ <b>Yangi Premium Custom Emoji qo'shish yo'riqnomasi:</b>\n\n"
-        "1. Shunchaki botga Telegram Premium emojisini to'g'ridan-to'g'ri yuboring.\n"
-        "2. Yoki buyruq orqali: <code>/add_emoji [emoji] [custom_id]</code>\n"
-        "Masalan: <code>/add_emoji 🚀 5429398777419014515</code>\n"
-        "3. Yoki AI ga yozing: <i>'mana bu emojiga yangi ID qo'sh: 🚀 5429398777419014515'</i>"
-    )
-
-
-@dp.message(Command("emojis", "list_emojis"))
-async def list_emojis_command_handler(message: Message):
-    if not await is_admin_or_owner(message.from_user.id):
-        return
-    res = list_custom_emojis()
-    admin_emojis = res.get("admin_emojilari", {})
-    text = (
-        f"🎨 <b>Barcha Premium Custom Emojilar:</b>\n"
-        f"• Jami tizimda faol: <b>{res.get('jami_emojilar_soni')} ta</b>\n"
-        f"• Siz (admin) qo'shgan emojilar: <b>{len(admin_emojis)} ta</b>\n\n"
-    )
-    if admin_emojis:
-        text += "<b>Admin qo'shgan emojilar:</b>\n"
-        for ch, cid in admin_emojis.items():
-            text += f"• {ch} -> <code>{cid}</code>\n"
-        text += "\n"
-    text += (
-        "💡 <i>Yangi emoji qo'shish uchun shunchaki premium emojini botga yuboring, "
-        "yoki <code>/add_emoji [emoji] [id]</code> buyrug'idan foydalaning.</i>"
-    )
-    await message.answer(text)
-
-
-@dp.message(Command("del_emoji"))
-async def del_emoji_command_handler(message: Message, command: CommandObject):
-    if not await is_admin_or_owner(message.from_user.id):
-        return
-    args = (command.args or "").strip()
-    if not args:
-        await message.answer("ℹ️ O'chirish uchun emojini ko'rsating: <code>/del_emoji 🚀</code>")
-        return
-    res = delete_custom_emoji(args)
-    if res.get("success"):
-        await message.answer(f"✅ {res.get('message')}")
-    else:
-        await message.answer(f"❌ {res.get('error')}")
-
-
-@dp.message(F.text & ~F.text.startswith("/"))
+@dp.message(F.text & ~F.text.startswith("/start"))
 async def ai_chat_handler(message: Message, state: FSMContext):
     curr_state = await state.get_state()
     if curr_state:
         return
 
     is_admin = await is_admin_or_owner(message.from_user.id)
+    text_content = (message.text or "").strip()
+    # Normalize input: strip leading slash if typed (e.g. /backup -> backup, /all -> all)
+    clean_text = text_content[1:].strip() if text_content.startswith("/") else text_content
+    clean_lower = clean_text.lower()
+
+    # Direct Administrative Action Shortcuts (work with or without slash)
+    if is_admin:
+        # 1. Database backup
+        if clean_lower in ("backup", "db backup") or any(w in clean_lower for w in ("baza nusxasi", "bazani nusxala", "backup ol")):
+            if os.path.exists("database.sqlite3"):
+                doc = FSInputFile("database.sqlite3")
+                await message.answer_document(doc, caption="💾 <b>SQLite ma'lumotlar bazasi zaxira nusxasi (Backup)</b>")
+                return
+
+        # 2. All check (trigger background check for all logins)
+        if clean_lower in ("all", "all tekshir") or any(w in clean_lower for w in ("barcha loginlarni tekshir", "hamma loginlarni tekshir", "qayta tekshir")):
+            await message.answer("⏳ <b>Barcha maktablar loginlarini tekshirish boshlandi...</b>")
+            asyncio.create_task(login_schedule(message.from_user.id))
+            return
+
+        # 3. Settings menu
+        if clean_lower in ("settings", "panel", "admin", "sozlamalar", "admin panel"):
+            await admin_settings_menu_handler(message, state)
+            return
+
+        # 4. Telegraph report
+        if clean_lower in ("telegraph", "telegraph hisoboti", "telegraph hisobot"):
+            await telegraph_report_handler(message)
+            return
+
+    # 5. Overall statistics
+    if clean_lower in ("stats", "statistika", "hisobot"):
+        report_text, markup = await generate_overall_report_content()
+        await message.answer(report_text, reply_markup=markup)
+        return
 
     # 0. Check if admin sent custom emoji(s) directly
     custom_entities = []

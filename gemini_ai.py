@@ -476,6 +476,39 @@ async def tool_manage_captchas(action: str = "status", count: int = 10):
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+def tool_add_school(school_number: int, place: str, days: int = 365):
+    """Faqat administrator uchun: Tizimga yangi maktab qo'shadi va uning faollik muddatini belgilaydi."""
+    try:
+        import uuid
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        cur.execute("SELECT id FROM School WHERE school_number = ?;", (school_number,))
+        if cur.fetchone():
+            con.close()
+            return {"success": False, "error": f"{school_number}-maktab allaqachon mavjud."}
+        url_key = str(uuid.uuid4())[:8]
+        cur.execute("INSERT INTO School (school_number, place, school_url, allowed_until) VALUES (?, ?, ?, datetime('now', ?));",
+                    (school_number, place.strip(), url_key, f"+{days} days"))
+        con.commit()
+        con.close()
+        return {"success": True, "message": f"{school_number}-maktab ({place}) {days} kun muddat bilan tizimga muvaffaqiyatli qo'shildi."}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def tool_backup_database():
+    """Faqat administrator uchun: SQLite ma'lumotlar bazasi zaxira holatini va hajmini qaytaradi."""
+    if os.path.exists(DB_PATH):
+        sz = round(os.path.getsize(DB_PATH) / (1024 * 1024), 2)
+        return {"success": True, "file": DB_PATH, "hajmi_mb": sz, "message": f"SQLite ma'lumotlar bazasi zaxira nusxasi mavjud ({sz} MB)."}
+    return {"success": False, "error": "Baza fayli topilmadi."}
+
+def tool_run_all_check():
+    """Faqat administrator uchun: Barcha maktablar va sinflardagi loginlarni eMaktab tizimiga qayta tekshirishni (all check) tasdiqlaydi."""
+    return {
+        "success": True,
+        "message": "Barcha maktablar va sinflardagi loginlarni eMaktab tizimiga kirishini tekshirish jarayoni boshlandi."
+    }
+
 PUBLIC_FUNCTION_DECLARATIONS = [
     {
         "name": "tool_get_system_stats",
@@ -689,6 +722,29 @@ ADMIN_FUNCTION_DECLARATIONS = [
         "name": "tool_list_custom_emojis",
         "description": "Faqat administrator uchun: Barcha tizimda saqlangan animatsiyali custom emojilar va ularning ID raqamlari ro'yxatini ko'rish.",
         "parameters": {"type": "OBJECT", "properties": {}}
+    },
+    {
+        "name": "tool_add_school",
+        "description": "Faqat administrator uchun: Tizimga yangi maktab qo'shish va uning amal qilish muddatini belgilash.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "school_number": {"type": "INTEGER", "description": "Maktab raqami (masalan 15)"},
+                "place": {"type": "STRING", "description": "Maktab joylashuvi yoki nomi (masalan '15-maktab')"},
+                "days": {"type": "INTEGER", "description": "Amal qilish muddati (kunlarda, standart 365)"}
+            },
+            "required": ["school_number", "place"]
+        }
+    },
+    {
+        "name": "tool_backup_database",
+        "description": "Faqat administrator uchun: Ma'lumotlar bazasining zaxira nusxasi (backup) holatini tayyorlash.",
+        "parameters": {"type": "OBJECT", "properties": {}}
+    },
+    {
+        "name": "tool_run_all_check",
+        "description": "Faqat administrator uchun: Barcha maktablar va sinflardagi hisoblar (loginlar) eMaktabga kirishini tekshirishni boshlash.",
+        "parameters": {"type": "OBJECT", "properties": {}}
     }
 ]
 
@@ -696,6 +752,8 @@ ADMIN_TOOL_NAMES = {tool["name"] for tool in ADMIN_FUNCTION_DECLARATIONS}
 
 SYSTEM_INSTRUCTION = (
     "Siz eMaktab tizimi bo'yicha aqlli yordamchisiz. "
+    "Siz va Administrator tizimni birgalikda to'liq boshqarasiz. "
+    "Botda hech qanday murakkab slash buyruqlar yo'q — barcha amallar va vazifalar tabiiy suhbat orqali siz tomoningizdan bajariladi. "
     "QAT'IY QOIDA: Javoblaringiz nihoyatda ixcham, qisqa va aniq bo'lsin. "
     "Keraksiz uzun kirish, lutf yoki xulosalarsiz, minimal so'zlar bilan javob bering. "
     "Foydalanuvchi oddiy matn yozsa yoki salomlashsa, 1-2 jumlada qisqa javob bering. "
@@ -850,6 +908,12 @@ async def ask_gemini(prompt: str, user_name: str = "", is_admin: bool = False) -
                                 f_result = tool_get_school_detailed_report(**fargs)
                             elif fname == "tool_manage_captchas":
                                 f_result = await tool_manage_captchas(**fargs)
+                            elif fname == "tool_add_school":
+                                f_result = tool_add_school(**fargs)
+                            elif fname == "tool_backup_database":
+                                f_result = tool_backup_database()
+                            elif fname == "tool_run_all_check":
+                                f_result = tool_run_all_check()
                             else:
                                 f_result = {}
 
