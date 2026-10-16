@@ -9,7 +9,7 @@ from gemini_ai import (
 )
 from emaktab_auto import auto_detect_login
 from reset_and_register import EMaktabResetter
-from md_styler import render_styled_text, apply_premium_emojis
+from md_styler import render_styled_text, apply_premium_emojis, EMOJI_MAP
 
 import asyncio
 import json
@@ -56,6 +56,30 @@ url = os.getenv('URL', "https://emaktab-2025.onrender.com")
 Token = os.getenv('TOKEN', "8301189313:AAFApmwNLY9AlccUQtfXP5PfV0kvg0RBQr8")
 DB_PATH = '/home/ubuntu/emaktab_2025/database.sqlite3' if os.path.exists('/home/ubuntu/emaktab_2025/database.sqlite3') else '/home/xusanboyman/emaktab_2025/database.sqlite3'
 
+def apply_premium_to_markup(markup):
+    if not markup or not getattr(markup, "inline_keyboard", None):
+        return markup
+    for row in markup.inline_keyboard:
+        for btn in row:
+            clean_text = btn.text.strip()
+            if not getattr(btn, "icon_custom_emoji_id", None):
+                for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
+                    if clean_text.startswith(char):
+                        btn.icon_custom_emoji_id = str(EMOJI_MAP[char])
+                        rem = clean_text[len(char):].strip()
+                        if rem:
+                            btn.text = rem
+                        break
+            else:
+                for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
+                    if clean_text.startswith(char):
+                        rem = clean_text[len(char):].strip()
+                        if rem:
+                            btn.text = rem
+                        break
+    return markup
+
+
 class PremiumEmojiMiddleware(BaseRequestMiddleware):
     async def __call__(self, make_request, bot, method):
         is_html = (
@@ -67,6 +91,10 @@ class PremiumEmojiMiddleware(BaseRequestMiddleware):
                 method.text = apply_premium_emojis(method.text)
             if hasattr(method, "caption") and isinstance(method.caption, str) and method.caption:
                 method.caption = apply_premium_emojis(method.caption)
+
+        if hasattr(method, "reply_markup") and method.reply_markup:
+            apply_premium_to_markup(method.reply_markup)
+
         return await make_request(bot, method)
 
 
