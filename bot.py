@@ -3259,6 +3259,13 @@ async def noop_callback(callback: CallbackQuery):
 # -------------------------------------------------------------------------
 # Gemini AI Chat Handler (responds to general questions and messages)
 # -------------------------------------------------------------------------
+CRED_STOPWORDS = {
+    'all', 'those', 'for', 'instead', 'use', 'login', 'logins', 'loginlar',
+    'parol', 'parollar', 'password', 'passwords', 'user', 'users', 'foydalanuvchi',
+    'barcha', 'hamma', 'sinf', 'maktab', 'haqida', 'bilan', 'deb', 'qilib',
+    'of', 'to', 'in', 'as', 'the', 'at', 'by', 'from', 'with', 'document', 'photo', 'fayl'
+}
+
 def parse_credentials_from_text(text: str) -> list[tuple[str, str]]:
     """
     Intelligently parses credentials from user messages.
@@ -3279,7 +3286,7 @@ parol: 12345
     p_lp = re.findall(r'(?:login|foydalanuvchi|user)?[:\s]*([a-zA-Z0-9._-]+)\s+(?:parol|password|kod|pass)[:\s]*([^\s,;]+)', text_clean, re.IGNORECASE)
     if p_lp:
         for u, p in p_lp:
-            if u.lower() not in ('login', 'parol', 'user', 'password') and len(u) >= 3:
+            if u.lower() not in CRED_STOPWORDS and p.lower() not in CRED_STOPWORDS and len(u) >= 3 and len(p) >= 3:
                 entries.append((u.strip(), p.strip()))
         if entries:
             return entries
@@ -3288,7 +3295,7 @@ parol: 12345
     p_colon = re.findall(r'([a-zA-Z0-9._-]+)\s*[:=]\s*([^\s,;]+)', text_clean)
     if p_colon:
         for u, p in p_colon:
-            if u.lower() not in ('login', 'parol', 'user', 'password') and len(u) >= 3:
+            if u.lower() not in CRED_STOPWORDS and p.lower() not in CRED_STOPWORDS and len(u) >= 3 and len(p) >= 3:
                 entries.append((u.strip(), p.strip()))
         if entries:
             return entries
@@ -3297,15 +3304,30 @@ parol: 12345
 
 
 def extract_password_from_override_text(text: str) -> str | None:
-    """Extracts candidate password from commands like 'instead use password as 12345678a for all' or 'the password was 12345678v'."""
+    """Extracts candidate password from commands like 'instead use 12345678o for all passwords' or 'use logins as 1234567'."""
     text_clean = text.strip()
-    m = re.search(r'(?:instead\s+)?use\s+password\s+(?:as\s+)?([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
+    # 1. 'use <pwd> for all' or 'instead use <pwd> for all ...'
+    m = re.search(r'(?:instead\s+)?use\s+([A-Za-z0-9!@#$%^&*_\-\+]{4,30})\s+for\s+(?:all|those|logins|passwords)', text_clean, re.I)
+    if m and m.group(1).lower() not in ('logins', 'password', 'passwords'):
+        return m.group(1).strip()
+    # 2. 'use logins as <pwd>' or 'use password as <pwd>'
+    m = re.search(r'use\s+(?:logins?|passwords?)\s+(?:as|is)?\s*[:=]?\s*([A-Za-z0-9!@#$%^&*_\-\+]{4,30})', text_clean, re.I)
     if m:
         return m.group(1).strip()
-    m = re.search(r'(?:the\s+)?password\s+(?:was|is|as)?\s*[:=]?\s*([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
+    # 3. 'instead use password as <pwd>'
+    m = re.search(r'(?:instead\s+)?use\s+passwords?\s+(?:as\s+)?([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
     if m:
         return m.group(1).strip()
-    m = re.search(r'parol(?:i|ini|ni)?\s+(?:as\s+|qilib\s+)?([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
+    # 4. 'the password was <pwd>'
+    m = re.search(r'(?:the\s+)?passwords?\s+(?:was|is|as)?\s*[:=]?\s*([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
+    if m:
+        return m.group(1).strip()
+    # 5. '<pwd> for all'
+    m = re.search(r'([A-Za-z0-9!@#$%^&*_\-\+]{6,30})\s+for\s+all', text_clean, re.I)
+    if m:
+        return m.group(1).strip()
+    # 6. Uzbek: 'paroli <pwd> qilib', 'hamma parollar <pwd>'
+    m = re.search(r'parol(?:i|ini|ni|lar)?\s+(?:as\s+|qilib\s+)?([A-Za-z0-9!@#$%^&*_\-\+]+)', text_clean, re.I)
     if m:
         return m.group(1).strip()
     m = re.search(r'([A-Za-z0-9!@#$%^&*_\-\+]{6,})\s+(?:parol|deb|qilib|bilan)', text_clean, re.I)
@@ -3316,10 +3338,21 @@ def extract_password_from_override_text(text: str) -> str | None:
 
 def extract_usernames_from_text(text: str) -> list[str]:
     """Extracts eMaktab usernames from a summary, bulleted list or error message."""
-    matches = re.findall(r'[•\*\-]?\s*[❌✅]?\s*([a-zA-Z][a-zA-Z0-9._\-]{3,35})\s*(?:\(|$|\s)', text)
+    # Check <code> tags first
+    code_matches = re.findall(r'<code>([a-zA-Z][a-zA-Z0-9._\-]{3,35})</code>', text)
+    if code_matches:
+        matches = code_matches
+    else:
+        # Match lines starting with bullets
+        matches = re.findall(r'^[•\*\-]?\s*[❌✅]?\s*([a-zA-Z][a-zA-Z0-9._\-]{3,35})', text, re.MULTILINE)
+    
     seen = set()
     res = []
-    stopwords = {'fayl', 'photo', 'jami', 'xato', 'natija', 'login', 'parol', 'password', 'maktab', 'sinf', 'document'}
+    stopwords = {
+        'fayl', 'photo', 'jami', 'xato', 'natija', 'login', 'logins', 'loginlar',
+        'parol', 'parollar', 'password', 'passwords', 'maktab', 'sinf', 'document',
+        'xatolik', 'berganlar', 'kirildi', 'kirilganlar', 'muvaffaqiyatli'
+    }
     for m in matches:
         m_clean = m.strip()
         if m_clean.lower() not in seen and m_clean.lower() not in stopwords:
