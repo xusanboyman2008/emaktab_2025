@@ -7,30 +7,67 @@ import re
 from pathlib import Path
 from md_styler import add_custom_emoji, delete_custom_emoji, list_custom_emojis
 
-GEMINI_API_KEYS = [
-    os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Ih3gXnAjLQbEFdU1mh_-fGMbC0qJ7FuCGOBAhmSGmr5g"),
-    os.getenv("GEMINI_BACKUP_KEY", "AQ.Ab8RN6LZKD2CWTEmAtJ2Q7O6-J-Ed12HrXcinzqpJb6FBGF80A")
-]
+DB_PATH = (
+    "/home/ubuntu/emaktab_2025/database.sqlite3"
+    if os.path.exists("/home/ubuntu/emaktab_2025/database.sqlite3")
+    else (
+        "/home/xusanboyman/emaktab_2025/database.sqlite3"
+        if os.path.exists("/home/xusanboyman/emaktab_2025/database.sqlite3")
+        else str(Path(__file__).parent / "database.sqlite3")
+    )
+)
+
 _CURRENT_KEY_IDX = 0
+_CACHED_KEYS: list[str] = []
+_LAST_KEY_FETCH = 0.0
 
 def get_ordered_api_keys() -> list[str]:
-    """Returns keys starting with the currently active key for seamless rotation & cycling."""
-    global _CURRENT_KEY_IDX
-    n = len(GEMINI_API_KEYS)
-    return [GEMINI_API_KEYS[(i + _CURRENT_KEY_IDX) % n] for i in range(n)]
+    """Dynamically fetches active API tokens from database table AiApiTokens with in-memory cycling."""
+    global _CURRENT_KEY_IDX, _CACHED_KEYS, _LAST_KEY_FETCH
+    import time
+    now_ts = time.time()
+    if not _CACHED_KEYS or (now_ts - _LAST_KEY_FETCH) > 30:
+        try:
+            con = sqlite3.connect(DB_PATH)
+            cur = con.cursor()
+            cur.execute("SELECT token FROM AiApiTokens WHERE service = 'gemini' AND is_active = 1 ORDER BY id ASC;")
+            tokens = [r[0].strip() for r in cur.fetchall() if r[0]]
+            con.close()
+            if tokens:
+                _CACHED_KEYS = tokens
+                _LAST_KEY_FETCH = now_ts
+        except Exception:
+            pass
+
+    if not _CACHED_KEYS:
+        env_k = os.getenv("GEMINI_API_KEY")
+        if env_k:
+            _CACHED_KEYS = [env_k.strip()]
+
+    if not _CACHED_KEYS:
+        return []
+
+    n = len(_CACHED_KEYS)
+    return [_CACHED_KEYS[(i + _CURRENT_KEY_IDX) % n] for i in range(n)]
 
 def mark_key_exhausted(exhausted_key: str):
-    """When a key runs out of quota or credits, immediately switch active index to next key."""
-    global _CURRENT_KEY_IDX
-    if exhausted_key in GEMINI_API_KEYS:
-        idx = GEMINI_API_KEYS.index(exhausted_key)
-        if idx == _CURRENT_KEY_IDX:
-            _CURRENT_KEY_IDX = (_CURRENT_KEY_IDX + 1) % len(GEMINI_API_KEYS)
-            print(f"🔄 Switched active Gemini API key from index {idx} to {_CURRENT_KEY_IDX} (...{GEMINI_API_KEYS[_CURRENT_KEY_IDX][-6:]})")
+    """When a key exhausts quota or is rejected, rotate index and mark in database."""
+    global _CURRENT_KEY_IDX, _CACHED_KEYS
+    if exhausted_key in _CACHED_KEYS:
+        idx = _CACHED_KEYS.index(exhausted_key)
+        if idx == _CURRENT_KEY_IDX and len(_CACHED_KEYS) > 1:
+            _CURRENT_KEY_IDX = (_CURRENT_KEY_IDX + 1) % len(_CACHED_KEYS)
+            print(f"🔄 Switched active Gemini API key from index {idx} to {_CURRENT_KEY_IDX}")
+    try:
+        con = sqlite3.connect(DB_PATH)
+        cur = con.cursor()
+        cur.execute("UPDATE AiApiTokens SET is_active = 0 WHERE token = ?;", (exhausted_key.strip(),))
+        con.commit()
+        con.close()
+    except Exception:
+        pass
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
-
-DB_PATH = str(Path(__file__).parent / "database.sqlite3")
 
 def tool_get_system_stats():
     """eMaktab tizimidagi barcha maktablar, sinflar, loginlar soni, kirilgan va kirilmaganlar umumiy statistikasini qaytaradi."""
@@ -1211,8 +1248,27 @@ async def extract_logins_intent_ai(text: str, reply_text: str = "") -> list[tupl
     return []
 
 async def extract_logins_from_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> list[dict]:
-    """Uses Gemini Vision to read logins/passwords from an image (photo, screenshot, paper list)."""
-    b64_data = base64.b64encode(image_bytes).decode('utf-8')
+    """Uses Gemini Vision (with PIL compression optimization) to read logins/passwords from an image."""
+    # Preprocess & optimize image size (e.g. compress 3MB phone photos down to crisp ~180KB)
+    final_bytes = image_bytes
+    final_mime = mime_type
+    try:
+        import io
+        from PIL import Image
+        pil_img = Image.open(io.BytesIO(image_bytes))
+        if max(pil_img.size) > 1600 or len(image_bytes) > 500 * 1024:
+            pil_img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+            buf = io.BytesIO()
+            if pil_img.mode in ("RGBA", "P"):
+                pil_img = pil_img.convert("RGB")
+            pil_img.save(buf, format="JPEG", quality=88)
+            final_bytes = buf.getvalue()
+            final_mime = "image/jpeg"
+    except Exception:
+        final_bytes = image_bytes
+        final_mime = mime_type
+
+    b64_data = base64.b64encode(final_bytes).decode('utf-8')
     prompt = (
         "Ushbu rasmdan (ro'yxat, qog'oz, skrinshot yoki jadvaldan) barcha eMaktab o'quvchi login va parollarini ajratib ol. "
         "Faqat quyidagi aniq JSON formatida qaytar:\n"
@@ -1228,7 +1284,7 @@ async def extract_logins_from_image(image_bytes: bytes, mime_type: str = "image/
                     {"text": prompt},
                     {
                         "inline_data": {
-                            "mime_type": mime_type,
+                            "mime_type": final_mime,
                             "data": b64_data
                         }
                     }

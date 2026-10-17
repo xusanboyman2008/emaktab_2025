@@ -136,7 +136,18 @@ class BotSetting(Base):
     value = Column(String, nullable=False)
 
 
-TABLES = [Grades, User, School_number, Captcha_ids, Logins, Logins_data, BotSetting]
+class AiApiTokens(Base):
+    __tablename__ = "AiApiTokens"
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    service = Column(String, default="gemini", index=True)
+    token = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(uzb_tz))
+    is_active = Column(Boolean, default=True, index=True)
+    in_use_project = Column(String, default="emaktab_2025")
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+
+TABLES = [Grades, User, School_number, Captcha_ids, Logins, Logins_data, BotSetting, AiApiTokens]
 
 
 async def generate_unique_url(length: int = 15):
@@ -1061,3 +1072,57 @@ async def get_or_create_school_by_number(school_number: int, place: str = None) 
         _SCHOOL_CACHE_BY_ID[new_school.id] = new_school
         _SCHOOL_CACHE_BY_URL[new_school.school_url] = new_school
         return new_school
+
+
+async def get_active_ai_tokens(service: str = "gemini") -> list[str]:
+    """Retrieves all active API tokens for a given service ordered by id."""
+    async with async_session() as session:
+        stmt = select(AiApiTokens.token).where(
+            and_(AiApiTokens.service == service, AiApiTokens.is_active == True)
+        ).order_by(AiApiTokens.id.asc())
+        res = await session.execute(stmt)
+        return [t for t in res.scalars().all() if t]
+
+
+async def add_ai_token(token: str, service: str = "gemini", in_use_project: str = "emaktab_2025") -> bool:
+    """Adds or reactivates an API token in the database."""
+    async with async_session() as session:
+        stmt = select(AiApiTokens).where(AiApiTokens.token == token.strip())
+        res = await session.execute(stmt)
+        existing = res.scalar_one_or_none()
+        if existing:
+            existing.is_active = True
+            existing.in_use_project = in_use_project
+            existing.service = service
+        else:
+            new_t = AiApiTokens(
+                service=service,
+                token=token.strip(),
+                is_active=True,
+                in_use_project=in_use_project
+            )
+            session.add(new_t)
+        await session.commit()
+        return True
+
+
+async def mark_ai_token_exhausted(token: str):
+    """Marks an API token as inactive / exhausted in the database."""
+    async with async_session() as session:
+        stmt = select(AiApiTokens).where(AiApiTokens.token == token.strip())
+        res = await session.execute(stmt)
+        tok = res.scalar_one_or_none()
+        if tok:
+            tok.is_active = False
+            await session.commit()
+
+
+async def record_ai_token_used(token: str):
+    """Updates last_used_at timestamp for a token."""
+    async with async_session() as session:
+        stmt = select(AiApiTokens).where(AiApiTokens.token == token.strip())
+        res = await session.execute(stmt)
+        tok = res.scalar_one_or_none()
+        if tok:
+            tok.last_used_at = datetime.now(uzb_tz)
+            await session.commit()
