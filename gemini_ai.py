@@ -1259,11 +1259,61 @@ async def extract_logins_from_image(image_bytes: bytes, mime_type: str = "image/
                                     clean_json = clean_json.split("```")[1].split("```")[0].strip()
                                 
                                 parsed = json.loads(clean_json)
-                                return parsed.get("logins", [])
+                                res_logins = parsed.get("logins", [])
+                                if res_logins:
+                                    return res_logins
             except Exception as e:
                 continue
 
-    
+    # 2. High-precision Local OCR Fallback (Pytesseract + OpenCV enhancement)
+    try:
+        import io
+        from PIL import Image
+        import pytesseract
+
+        img = Image.open(io.BytesIO(image_bytes))
+        ocr_text = pytesseract.image_to_string(img)
+        
+        # Also try cropped right-half if it looks like a wide table/monitor photo
+        try:
+            import cv2
+            import numpy as np
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            cv_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if cv_img is not None:
+                ch, cw = cv_img.shape[:2]
+                # Right half often contains Login / Password columns
+                right_crop = cv_img[int(ch * 0.05):int(ch * 0.85), int(cw * 0.45):]
+                gray = cv2.cvtColor(right_crop, cv2.COLOR_BGR2GRAY)
+                clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+                enhanced = clahe.apply(gray)
+                ocr_text += "\n" + pytesseract.image_to_string(enhanced, config="--psm 6")
+        except Exception:
+            pass
+
+        # Parse logins & passwords using multi-pattern regex
+        norm_text = re.sub(r'(\s+)(?:login|foydalanuvchi|user)[:\s]+', r'\nlogin: ', ocr_text, flags=re.IGNORECASE)
+        norm_text = re.sub(r'(\s+)(?:parol|password|kod|pass)[:\s]+', r'\npassword: ', norm_text, flags=re.IGNORECASE)
+
+        local_results = []
+        lines = [ln.strip() for ln in norm_text.splitlines() if ln.strip()]
+        curr_u = None
+        for line in lines:
+            m_u = re.match(r'^(?:login|foydalanuvchi|user)[:\s]+([a-zA-Z0-9._\s-]{3,40})$', line, re.IGNORECASE)
+            m_p = re.match(r'^(?:parol|password|kod|pass)[:\s]+([a-zA-Z0-9@#$*._-]{4,30})$', line, re.IGNORECASE)
+            if m_u:
+                curr_u = m_u.group(1).strip()
+            elif m_p and curr_u:
+                curr_p = m_p.group(1).strip()
+                if not any(r["username"].lower() == curr_u.lower() for r in local_results):
+                    local_results.append({"username": curr_u, "password": curr_p})
+                curr_u = None
+
+        if local_results:
+            return local_results
+    except Exception as err:
+        print(f"Local OCR fallback error: {err}")
+
     return []
 
 async def extract_logins_from_document(doc_bytes: bytes, filename: str = "", mime_type: str = "") -> list[dict]:

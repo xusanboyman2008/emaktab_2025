@@ -64,23 +64,15 @@ def apply_premium_to_markup(markup, enable_custom: bool = True):
         return markup
     for row in markup.inline_keyboard:
         for btn in row:
+            if not getattr(btn, "text", None):
+                continue
             clean_text = btn.text.strip()
             if enable_custom:
-                if not getattr(btn, "icon_custom_emoji_id", None):
-                    for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
-                        if clean_text.startswith(char):
-                            btn.icon_custom_emoji_id = str(EMOJI_MAP[char])
-                            rem = clean_text[len(char):].strip()
-                            if rem:
-                                btn.text = rem
-                            break
-                else:
-                    for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
-                        if clean_text.startswith(char):
-                            rem = clean_text[len(char):].strip()
-                            if rem:
-                                btn.text = rem
-                            break
+                # Retain original text so buttons NEVER appear empty or broken
+                for char in sorted(EMOJI_MAP.keys(), key=len, reverse=True):
+                    if clean_text.startswith(char):
+                        btn.icon_custom_emoji_id = str(EMOJI_MAP[char])
+                        break
             else:
                 btn.icon_custom_emoji_id = None
     return markup
@@ -596,6 +588,8 @@ async def view_school_callback(callback: CallbackQuery):
             is_allowed = bool(getattr(g_info, 'is_allowed', False)) if g_info else False
             is_paid = bool(getattr(g_info, 'is_paid', False)) if g_info else False
             allowed_until = getattr(g_info, 'allowed_until', None) if g_info else None
+            if allowed_until and getattr(allowed_until, 'tzinfo', None) is None:
+                allowed_until = allowed_until.replace(tzinfo=ZoneInfo("Asia/Tashkent"))
             is_trial_active = bool(is_allowed and (not allowed_until or allowed_until >= now))
 
             if is_paid:
@@ -691,6 +685,8 @@ async def render_grades_control_panel(callback: CallbackQuery, school_id: int, p
         is_allowed = bool(getattr(g_info, 'is_allowed', False)) if g_info else False
         is_paid = bool(getattr(g_info, 'is_paid', False)) if g_info else False
         allowed_until = getattr(g_info, 'allowed_until', None) if g_info else None
+        if allowed_until and getattr(allowed_until, 'tzinfo', None) is None:
+            allowed_until = allowed_until.replace(tzinfo=ZoneInfo("Asia/Tashkent"))
 
         if is_allowed:
             if is_paid:
@@ -1635,6 +1631,8 @@ async def generate_telegraph_report_pages(is_admin: bool) -> list[dict]:
             is_allowed = bool(getattr(g_info, 'is_allowed', False)) if g_info else False
             is_paid = bool(getattr(g_info, 'is_paid', False)) if g_info else False
             allowed_until = getattr(g_info, 'allowed_until', None) if g_info else None
+            if allowed_until and getattr(allowed_until, 'tzinfo', None) is None:
+                allowed_until = allowed_until.replace(tzinfo=ZoneInfo("Asia/Tashkent"))
             now_tz = datetime.now(ZoneInfo("Asia/Tashkent"))
             is_trial_active = bool(is_allowed and (not allowed_until or allowed_until >= now_tz))
 
@@ -3398,7 +3396,27 @@ parol: 12345
         clean_lines.append(line)
     filtered_text = "\n".join(clean_lines)
 
-    # Pattern 1: Explicit login ... parol ...
+    # Pattern 1: Block/Line-based pairing (supports usernames with spaces, e.g. 'ermatova farangiz199')
+    norm_text = re.sub(r'(\s+)(?:login|foydalanuvchi|user)[:\s]+', r'\nlogin: ', filtered_text, flags=re.IGNORECASE)
+    norm_text = re.sub(r'(\s+)(?:parol|password|kod|pass)[:\s]+', r'\npassword: ', norm_text, flags=re.IGNORECASE)
+
+    lines = [ln.strip() for ln in norm_text.splitlines() if ln.strip()]
+    curr_u = None
+    for line in lines:
+        m_u = re.match(r'^(?:login|foydalanuvchi|user)[:\s]+(.+)$', line, re.IGNORECASE)
+        m_p = re.match(r'^(?:parol|password|kod|pass)[:\s]+(.+)$', line, re.IGNORECASE)
+        if m_u:
+            curr_u = m_u.group(1).strip()
+        elif m_p and curr_u:
+            curr_p = m_p.group(1).strip()
+            if curr_u.lower() not in CRED_STOPWORDS and curr_p.lower() not in CRED_STOPWORDS and len(curr_u) >= 3 and len(curr_p) >= 3:
+                entries.append((curr_u, curr_p))
+            curr_u = None
+
+    if entries:
+        return entries
+
+    # Pattern 2: Explicit login ... parol ... on same line
     p_lp = re.findall(r'(?:login|foydalanuvchi|user)?[:\s]*([a-zA-Z0-9._-]+)\s+(?:parol|password|kod|pass)[:\s]*([^\s,;]+)', filtered_text, re.IGNORECASE)
     if p_lp:
         for u, p in p_lp:
@@ -3407,7 +3425,7 @@ parol: 12345
         if entries:
             return entries
 
-    # Pattern 2: user:pass, user2:pass2
+    # Pattern 3: user:pass, user2:pass2
     p_colon = re.findall(r'([a-zA-Z0-9._-]+)\s*[:=]\s*([^\s,;]+)', text_clean)
     if p_colon:
         for u, p in p_colon:
@@ -3484,7 +3502,9 @@ async def handle_logins_batch_execution(message: Message, credentials: list[tupl
     status_msg = await message.answer(wait_text)
     await message.bot.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
 
-    sem = asyncio.Semaphore(5)
+    sem = asyncio.Semaphore(12)
+    succ_list = []
+    fail_list = []
 
     async def verify_one(u, p):
         async with sem:
